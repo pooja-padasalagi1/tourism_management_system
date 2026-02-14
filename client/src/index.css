@@ -1,0 +1,14 @@
+:root{--accent:#2b6cb0;--muted:#666}
+body{font-family:Arial,Helvetica,sans-serif;margin:0;color:#222}
+.site-header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--accent);color:#fff}
+.site-header nav a{color:#fff;margin-right:12px;text-decoration:none}
+.site-header .brand{font-weight:700}
+.container{padding:20px}
+.card{padding:12px;border:1px solid #eee;border-radius:6px;margin:8px 0}
+.card-list{display:flex;gap:12px;flex-wrap:wrap}
+.page h2{margin-top:0}
+.site-footer{padding:12px 20px;background:#f7f7f7;color:var(--muted);text-align:center}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{border:1px solid #eee;padding:8px;text-align:left}
+.login-page .card{max-width:360px;margin:12px auto}
+.error{color:#a00;margin-top:8px}

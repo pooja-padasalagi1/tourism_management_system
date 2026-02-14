@@ -1,0 +1,40 @@
+-- Schema for Tourism Management System (minimal)
+CREATE DATABASE IF NOT EXISTS tms_db;
+USE tms_db;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  email VARCHAR(150) UNIQUE,
+  password VARCHAR(255),
+  role VARCHAR(50) DEFAULT 'user',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS hotels (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(200),
+  location VARCHAR(200),
+  rating INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS tours (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(200),
+  description TEXT,
+  price DECIMAL(10,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bookings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  tour_id INT,
+  hotel_id INT,
+  status VARCHAR(50) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE SET NULL,
+  FOREIGN KEY (hotel_id) REFERENCES hotels(id) ON DELETE SET NULL
+);
