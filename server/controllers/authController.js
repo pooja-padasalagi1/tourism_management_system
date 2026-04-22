@@ -14,7 +14,8 @@ exports.register = async (req, res) => {
     const token = jwt.sign({ id, email, role: role||'user' }, process.env.JWT_SECRET || 'secret', { expiresIn: '8h' });
     res.json({ token, user: { id, name, email, role } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Register error:', err);
+    res.status(500).json({ error: 'Database connection failed. Please ensure MySQL is running and configured correctly.' });
   }
 };
 
@@ -30,6 +31,8 @@ exports.login = async (req, res) => {
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '8h' });
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Database connection failed. Please ensure MySQL is running and configured correctly.' });
   }
 };
+

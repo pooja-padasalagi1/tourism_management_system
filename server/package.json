@@ -5,6 +5,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "setup-db": "node setupDatabase.js",
+    "test-db": "node testConnection.js",
+    "check-mysql": "node checkMySQL.js",
+    "init-db": "node initDb.js",
     "reset:passwords": "node scripts/resetPasswords.js"
   },
   "devDependencies": {

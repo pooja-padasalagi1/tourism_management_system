@@ -27,6 +27,20 @@ CREATE TABLE IF NOT EXISTS tours (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS tour_packages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  description TEXT,
+  duration_days INT,
+  price DECIMAL(10,2),
+  destination VARCHAR(200),
+  included_activities TEXT,
+  max_participants INT,
+  difficulty_level VARCHAR(50),
+  rating INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS bookings (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT,
