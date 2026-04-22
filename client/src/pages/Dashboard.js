@@ -3,107 +3,80 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import Spinner from '../components/Spinner';
 
-const StatCard = ({ icon, label, value, color, delay = 0 }) => (
-  <div style={{
-    animation: `slideInUp 0.5s ease ${delay}s backwards`
-  }}>
-    <div className="card" style={{
-      textAlign: 'center',
-      padding: '35px 25px',
-      background: `linear-gradient(135deg, ${color}08 0%, ${color}02 100%)`,
-      border: `2px solid ${color}20`,
-      position: 'relative',
-      overflow: 'hidden',
-      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-    }}>
+const STAT_ICONS = {
+  users:    { d: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', color: '#3d8bcd' },
+  hotels:   { d: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', color: '#27ae60' },
+  tours:    { d: 'M12 19l9 2-9-18-9 18 9-2zm0 0v-8', color: '#c9a84c' },
+  bookings: { d: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', color: '#8b5cf6' },
+};
+
+function StatCard({ type, label, value, delay = 0 }) {
+  const cfg = STAT_ICONS[type];
+  return (
+    <div
+      className="card"
+      style={{
+        padding: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '18px',
+        animation: `slideInUp 0.4s ease ${delay}s backwards`,
+        borderLeft: `3px solid ${cfg.color}`,
+        cursor: 'default',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderLeftColor = '#c9a84c'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderLeftColor = cfg.color; }}
+    >
       <div style={{
-        position: 'absolute',
-        top: '12px',
-        right: '12px',
-        fontSize: '48px',
-        opacity: 0.1
+        width: '52px', height: '52px',
+        borderRadius: '10px',
+        background: `${cfg.color}18`,
+        border: `1px solid ${cfg.color}30`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
       }}>
-        {icon}
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d={cfg.d} />
+        </svg>
       </div>
-      <div style={{ 
-        fontSize: '52px', 
-        marginBottom: '16px',
-        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
-      }}>
-        {icon}
-      </div>
-      <div style={{ 
-        fontSize: '48px', 
-        fontWeight: 900,
-        background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
-        margin: '12px 0',
-        animation: 'float 3s ease-in-out infinite'
-      }}>
-        {value}
-      </div>
-      <div style={{ 
-        fontSize: '13px', 
-        color: 'var(--muted)', 
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '1.5px'
-      }}>
-        {label}
+      <div>
+        <div style={{ fontSize: '28px', fontWeight: 900, color: '#e8edf2', fontFamily: "'Barlow', sans-serif", lineHeight: 1 }}>{value}</div>
+        <div style={{ fontSize: '11px', color: '#5a7080', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>{label}</div>
       </div>
     </div>
-  </div>
-);
+  );
+}
 
-export default function Dashboard(){
-  const [counts, setCounts] = useState({users:0, hotels:0, tours:0, bookings:0});
+const STATUS_COLORS = {
+  pending:   { bg: 'rgba(230,126,34,0.12)', text: '#e67e22', border: 'rgba(230,126,34,0.3)' },
+  confirmed: { bg: 'rgba(39,174,96,0.12)',  text: '#27ae60', border: 'rgba(39,174,96,0.3)' },
+  cancelled: { bg: 'rgba(192,57,43,0.12)',  text: '#c0392b', border: 'rgba(192,57,43,0.3)' },
+  completed: { bg: 'rgba(61,90,128,0.15)',  text: '#7a9fc0', border: 'rgba(61,90,128,0.3)' },
+};
+
+export default function Dashboard() {
+  const [counts, setCounts] = useState({ users: 0, hotels: 0, tours: 0, bookings: 0 });
   const [topHotels, setTopHotels] = useState([]);
   const [popularTours, setPopularTours] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
-  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const nav = useNavigate();
 
   useEffect(() => {
-    async function load(){
+    async function load() {
       try {
         const [users, hotels, tours, bookings] = await Promise.all([
           api.get('/users').then(r => r.data).catch(() => []),
           api.get('/hotels').then(r => r.data).catch(() => []),
           api.get('/tours').then(r => r.data).catch(() => []),
-          api.get('/bookings').then(r => r.data).catch(() => [])
+          api.get('/bookings').then(r => r.data).catch(() => []),
         ]);
-        
-        setCounts({ 
-          users: users.length, 
-          hotels: hotels.length, 
-          tours: tours.length, 
-          bookings: bookings.length 
-        });
-
-        // Top rated hotels
-        const sortedHotels = [...hotels].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 5);
-        setTopHotels(sortedHotels);
-
-        // Popular tours (by price - assuming higher price = premium)
-        const sortedTours = [...tours].sort((a, b) => (b.price || 0) - (a.price || 0)).slice(0, 5);
-        setPopularTours(sortedTours);
-
-        // Recent bookings
-        setRecentBookings(bookings.slice(0, 5));
-
-        // Extract unique locations from hotels
-        const uniqueLocations = [...new Set(hotels.map(h => h.location).filter(Boolean))];
-        const locationStats = uniqueLocations.map(loc => ({
-          name: loc,
-          count: hotels.filter(h => h.location === loc).length
-        })).sort((a, b) => b.count - a.count).slice(0, 6);
-        setLocations(locationStats);
-
+        setCounts({ users: users.length, hotels: hotels.length, tours: tours.length, bookings: bookings.length });
+        setTopHotels([...hotels].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 5));
+        setPopularTours([...tours].sort((a, b) => (b.price || 0) - (a.price || 0)).slice(0, 5));
+        setRecentBookings(bookings.slice(0, 6));
       } catch(e) {
-        console.error('Error loading dashboard data:', e);
+        console.error('Dashboard load error:', e);
       } finally {
         setLoading(false);
       }
@@ -111,492 +84,149 @@ export default function Dashboard(){
     load();
   }, []);
 
-  const statusColors = {
-    pending: { bg: 'rgba(245,158,11,0.1)', text: '#f59e0b', border: '#f59e0b' },
-    confirmed: { bg: 'rgba(16,185,129,0.1)', text: '#10b981', border: '#10b981' },
-    cancelled: { bg: 'rgba(244,63,94,0.1)', text: '#f43f5e', border: '#f43f5e' }
-  };
+  if (loading) {
+    return (
+      <div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Spinner size="lg" />
+          <p style={{ marginTop: '20px', color: '#3d5a70', fontSize: '13px', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 700 }}>Loading Dashboard</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
-      <div style={{ marginBottom: '40px' }}>
-        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ 
-            fontSize: '42px',
-            filter: 'drop-shadow(0 4px 8px rgba(99,102,241,0.3))'
-          }}>🌍</span>
-          <span>Dashboard</span>
-        </h2>
-        <p style={{ 
-          margin: '8px 0 0 0', 
-          color: 'var(--muted)', 
-          fontSize: '15px',
-          fontWeight: 500
-        }}>
-          Welcome back! Here's what's happening with your tourism platform
-        </p>
-      </div>
-      
-      {loading ? (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          minHeight: '500px',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.3) 100%)',
-          borderRadius: '20px',
-          border: '2px dashed rgba(99,102,241,0.2)'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <Spinner size="lg" />
-            <p style={{ 
-              marginTop: '24px', 
-              color: 'var(--muted)', 
-              fontSize: '18px',
-              fontWeight: 600
-            }}>
-              Loading your dashboard...
-            </p>
-          </div>
+      {/* Page Header */}
+      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h2 style={{ margin: 0 }}>Dashboard</h2>
+          <p style={{ margin: '6px 0 0 0', color: '#3d5a70', fontSize: '13px', letterSpacing: '0.5px' }}>
+            Overview of your tourism platform
+          </p>
         </div>
-      ) : (
-        <>
-          {/* Main Stats */}
-          <div className="card-list" style={{ marginBottom: '40px' }}>
-            <StatCard icon="👥" label="Total Users" value={counts.users} color="#6366f1" delay={0.1} />
-            <StatCard icon="🏨" label="Total Hotels" value={counts.hotels} color="#8b5cf6" delay={0.2} />
-            <StatCard icon="✈️" label="Total Tours" value={counts.tours} color="#ec4899" delay={0.3} />
-            <StatCard icon="📅" label="Total Bookings" value={counts.bookings} color="#f59e0b" delay={0.4} />
-          </div>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button className="btn" onClick={() => nav('/bookings')} style={{ padding: '10px 18px', fontSize: '11px' }}>New Booking</button>
+          <button className="btn" onClick={() => nav('/tours')} style={{ padding: '10px 18px', fontSize: '11px' }}>Add Tour</button>
+        </div>
+      </div>
 
-          {/* Top Hotels Section */}
-          <div style={{ 
-            marginBottom: '40px',
-            animation: 'slideInUp 0.5s ease 0.5s backwards'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '24px'
-            }}>
-              <h3 style={{ 
-                margin: 0,
-                fontSize: '24px',
-                fontWeight: 800,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                <span style={{ fontSize: '28px' }}>🏆</span>
-                Top Rated Hotels
-              </h3>
-              <button
-                onClick={() => nav('/hotels')}
-                style={{
-                  padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(139,92,246,0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 8px 20px rgba(139,92,246,0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 4px 12px rgba(139,92,246,0.3)';
-                }}
-              >
-                View All →
-              </button>
-            </div>
-            
-            {topHotels.length === 0 ? (
-              <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏨</div>
-                <p>No hotels available yet</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-                {topHotels.map((hotel, idx) => (
-                  <div 
-                    key={hotel.id} 
-                    className="card"
-                    style={{
-                      padding: '24px',
-                      cursor: 'pointer',
-                      animation: `slideInUp 0.4s ease ${0.6 + idx * 0.1}s backwards`
-                    }}
-                    onClick={() => nav('/hotels')}
-                  >
-                    <div style={{ 
-                      fontSize: '32px', 
-                      marginBottom: '12px',
-                      textAlign: 'center'
-                    }}>
-                      🏨
-                    </div>
-                    <h4 style={{ 
-                      margin: '0 0 8px 0',
-                      fontSize: '18px',
-                      fontWeight: 800,
-                      color: 'var(--text)',
-                      textAlign: 'center'
-                    }}>
-                      {hotel.name}
-                    </h4>
-                    <div style={{ 
-                      textAlign: 'center',
-                      color: 'var(--muted)',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      marginBottom: '12px'
-                    }}>
-                      📍 {hotel.location}
-                    </div>
-                    <div style={{ 
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 12px',
-                      background: 'linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(251,191,36,0.1) 100%)',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(245,158,11,0.2)'
-                    }}>
-                      <span style={{ fontSize: '16px' }}>⭐</span>
-                      <span style={{ 
-                        fontWeight: 700,
-                        color: '#f59e0b',
-                        fontSize: '16px'
-                      }}>
-                        {hotel.rating.toFixed(1)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* Stats Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '36px' }}>
+        <StatCard type="users"    label="Total Users"    value={counts.users}    delay={0.05} />
+        <StatCard type="hotels"   label="Total Hotels"   value={counts.hotels}   delay={0.1} />
+        <StatCard type="tours"    label="Total Tours"    value={counts.tours}    delay={0.15} />
+        <StatCard type="bookings" label="Total Bookings" value={counts.bookings} delay={0.2} />
+      </div>
 
-          {/* Popular Tours Section */}
-          <div style={{ 
-            marginBottom: '40px',
-            animation: 'slideInUp 0.5s ease 0.7s backwards'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '24px'
-            }}>
-              <h3 style={{ 
-                margin: 0,
-                fontSize: '24px',
-                fontWeight: 800,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                <span style={{ fontSize: '28px' }}>🌟</span>
-                Premium Tours
-              </h3>
-              <button
-                onClick={() => nav('/tours')}
-                style={{
-                  padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(236,72,153,0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 8px 20px rgba(236,72,153,0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 4px 12px rgba(236,72,153,0.3)';
-                }}
-              >
-                View All →
-              </button>
-            </div>
-            
-            {popularTours.length === 0 ? (
-              <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>✈️</div>
-                <p>No tours available yet</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-                {popularTours.map((tour, idx) => (
-                  <div 
-                    key={tour.id} 
-                    className="card"
-                    style={{
-                      padding: '24px',
-                      cursor: 'pointer',
-                      animation: `slideInUp 0.4s ease ${0.8 + idx * 0.1}s backwards`
-                    }}
-                    onClick={() => nav('/tours')}
-                  >
-                    <div style={{ 
-                      fontSize: '32px', 
-                      marginBottom: '12px',
-                      textAlign: 'center'
-                    }}>
-                      ✈️
-                    </div>
-                    <h4 style={{ 
-                      margin: '0 0 12px 0',
-                      fontSize: '18px',
-                      fontWeight: 800,
-                      color: 'var(--text)',
-                      textAlign: 'center',
-                      minHeight: '48px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      {tour.title}
-                    </h4>
-                    <div style={{ 
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 16px',
-                      background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.08) 100%)',
-                      borderRadius: '10px',
-                      border: '2px solid rgba(99,102,241,0.15)'
-                    }}>
-                      <span style={{ fontSize: '20px' }}>💰</span>
-                      <span style={{ 
-                        fontSize: '22px',
-                        fontWeight: 900,
-                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text'
-                      }}>
-                        ${Number(tour.price || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Locations Section */}
-          <div style={{ 
-            marginBottom: '40px',
-            animation: 'slideInUp 0.5s ease 0.9s backwards'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 24px 0',
-              fontSize: '24px',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px'
-            }}>
-              <span style={{ fontSize: '28px' }}>📍</span>
-              Popular Locations
+      {/* Two-column layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px', marginBottom: '28px' }}>
+        {/* Top Hotels */}
+        <div className="card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+              Top Rated Hotels
             </h3>
-            
-            {locations.length === 0 ? (
-              <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📍</div>
-                <p>No locations available yet</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-                {locations.map((loc, idx) => (
-                  <div 
-                    key={idx} 
-                    className="card"
-                    style={{
-                      padding: '20px',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      animation: `slideInUp 0.4s ease ${1.0 + idx * 0.08}s backwards`
-                    }}
-                    onClick={() => nav('/hotels')}
-                  >
-                    <div style={{ fontSize: '28px', marginBottom: '8px' }}>📍</div>
-                    <div style={{ 
-                      fontSize: '18px',
-                      fontWeight: 800,
-                      color: 'var(--text)',
-                      marginBottom: '6px'
-                    }}>
-                      {loc.name}
-                    </div>
-                    <div style={{ 
-                      fontSize: '24px',
-                      fontWeight: 900,
-                      background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text'
-                    }}>
-                      {loc.count}
-                    </div>
-                    <div style={{ 
-                      fontSize: '12px',
-                      color: 'var(--muted)',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      {loc.count === 1 ? 'Hotel' : 'Hotels'}
-                    </div>
+            <button onClick={() => nav('/hotels')} style={{ padding: '6px 12px', fontSize: '10px', background: 'transparent', border: '1px solid rgba(201,168,76,0.3)', color: '#c9a84c', boxShadow: 'none' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+              View All
+            </button>
+          </div>
+          {topHotels.length === 0 ? (
+            <p style={{ color: '#3d5a70', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>No hotels yet</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {topHotels.map((hotel, idx) => (
+                <div key={hotel.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: idx < topHotels.length - 1 ? '1px solid rgba(61,90,128,0.2)' : 'none' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 900, color: '#c9a84c', flexShrink: 0 }}>
+                    {idx + 1}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Recent Bookings Section */}
-          <div style={{ 
-            animation: 'slideInUp 0.5s ease 1.1s backwards'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '24px'
-            }}>
-              <h3 style={{ 
-                margin: 0,
-                fontSize: '24px',
-                fontWeight: 800,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                <span style={{ fontSize: '28px' }}>📅</span>
-                Recent Bookings
-              </h3>
-              <button
-                onClick={() => nav('/bookings')}
-                style={{
-                  padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(245,158,11,0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 8px 20px rgba(245,158,11,0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 4px 12px rgba(245,158,11,0.3)';
-                }}
-              >
-                View All →
-              </button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '14px', color: '#c5d0db', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hotel.name}</div>
+                    <div style={{ fontSize: '12px', color: '#3d5a70', marginTop: '2px' }}>{hotel.location}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                    <span style={{ color: '#c9a84c', fontSize: '12px' }}>★</span>
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: '#c9a84c' }}>{Number(hotel.rating || 0).toFixed(1)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            
-            {recentBookings.length === 0 ? (
-              <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📅</div>
-                <p>No bookings yet</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {recentBookings.map((booking, idx) => {
-                  const statusStyle = statusColors[booking.status] || statusColors.pending;
-                  return (
-                    <div 
-                      key={booking.id} 
-                      className="card"
-                      style={{
-                        padding: '20px 24px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        animation: `slideInUp 0.4s ease ${1.2 + idx * 0.08}s backwards`,
-                        flexWrap: 'wrap',
-                        gap: '16px'
-                      }}
-                      onClick={() => nav('/bookings')}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, minWidth: '200px' }}>
-                        <div style={{
-                          width: '48px',
-                          height: '48px',
-                          borderRadius: '12px',
-                          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '24px',
-                          boxShadow: '0 4px 12px rgba(99,102,241,0.3)'
-                        }}>
-                          📅
-                        </div>
-                        <div>
-                          <div style={{ 
-                            fontWeight: 800,
-                            fontSize: '16px',
-                            color: 'var(--text)',
-                            marginBottom: '4px'
-                          }}>
-                            Booking #{booking.id}
-                          </div>
-                          <div style={{ 
-                            fontSize: '13px',
-                            color: 'var(--muted)',
-                            fontWeight: 600
-                          }}>
-                            User ID: {booking.user_id}
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{
-                        padding: '8px 16px',
-                        background: statusStyle.bg,
-                        color: statusStyle.text,
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        border: `2px solid ${statusStyle.border}30`
-                      }}>
-                        {booking.status}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          )}
+        </div>
+
+        {/* Premium Tours */}
+        <div className="card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+              Premium Tours
+            </h3>
+            <button onClick={() => nav('/tours')} style={{ padding: '6px 12px', fontSize: '10px', background: 'transparent', border: '1px solid rgba(201,168,76,0.3)', color: '#c9a84c', boxShadow: 'none' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+              View All
+            </button>
           </div>
-        </>
-      )}
+          {popularTours.length === 0 ? (
+            <p style={{ color: '#3d5a70', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>No tours yet</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {popularTours.map((tour, idx) => (
+                <div key={tour.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: idx < popularTours.length - 1 ? '1px solid rgba(61,90,128,0.2)' : 'none' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(61,90,128,0.2)', border: '1px solid rgba(61,90,128,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 900, color: '#7a9fc0', flexShrink: 0 }}>
+                    {idx + 1}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '14px', color: '#c5d0db', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tour.title}</div>
+                    {tour.description && <div style={{ fontSize: '12px', color: '#3d5a70', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tour.description}</div>}
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: '14px', color: '#c9a84c', flexShrink: 0 }}>
+                    ${Number(tour.price || 0).toFixed(0)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Bookings */}
+      <div className="card" style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+            Recent Bookings
+          </h3>
+          <button onClick={() => nav('/bookings')} style={{ padding: '6px 12px', fontSize: '10px', background: 'transparent', border: '1px solid rgba(201,168,76,0.3)', color: '#c9a84c', boxShadow: 'none' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+            View All
+          </button>
+        </div>
+        {recentBookings.length === 0 ? (
+          <p style={{ color: '#3d5a70', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>No bookings yet</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+            {recentBookings.map(b => {
+              const sc = STATUS_COLORS[b.status] || STATUS_COLORS.pending;
+              return (
+                <div key={b.id} style={{ padding: '14px 16px', borderRadius: '8px', background: 'rgba(13,27,42,0.5)', border: '1px solid rgba(61,90,128,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'border-color 0.2s ease' }}
+                  onClick={() => nav('/bookings')}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.3)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(61,90,128,0.3)'; }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '14px', color: '#c5d0db' }}>#{b.id} — {b.user_name || `User ${b.user_id}`}</div>
+                    <div style={{ fontSize: '12px', color: '#3d5a70', marginTop: '3px' }}>{b.tour_title || 'Tour'}</div>
+                  </div>
+                  <span style={{ padding: '4px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
+                    {b.status}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

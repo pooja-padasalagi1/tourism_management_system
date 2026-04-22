@@ -1,564 +1,248 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import api from '../api';
 import { getUser } from '../auth';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import Spinner from '../components/Spinner';
 
-const RatingStars = ({ rating }) => {
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
-  
+/* ── helpers ── */
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  const colors = { success: '#1e8e3e', error: '#d93025', info: '#1a73e8' };
+  el.style.cssText = `position:fixed;top:80px;right:24px;z-index:9999;padding:14px 20px;border-radius:8px;font-weight:700;font-size:13px;color:#fff;background:${colors[type]||colors.success};box-shadow:0 8px 24px rgba(0,0,0,0.2);animation:slideInRight .3s ease;min-width:240px;`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function exportCSV(data, filename) {
+  if (!data.length) return toast('Nothing to export', 'info');
+  const keys = Object.keys(data[0]);
+  const csv = [keys.join(','), ...data.map(r => keys.map(k => `"${String(r[k]??'').replace(/"/g,'""')}"`).join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = filename;
+  a.click();
+  toast(`Exported ${data.length} rows`);
+}
+
+function StarRating({ rating, interactive = false, onChange }) {
+  const [hover, setHover] = useState(0);
+  const r = Number(rating || 0);
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: '8px',
-      padding: '8px 12px',
-      background: 'linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(251,191,36,0.1) 100%)',
-      borderRadius: '8px',
-      border: '1px solid rgba(245,158,11,0.2)'
-    }}>
-      <div style={{ fontSize: '18px', display: 'flex', gap: '2px' }}>
-        {[...Array(5)].map((_, i) => (
-          <span key={i} style={{ 
-            color: i < fullStars ? '#f59e0b' : (i === fullStars && hasHalfStar ? '#fbbf24' : '#e5e7eb'),
-            filter: i < rating ? 'drop-shadow(0 2px 4px rgba(245,158,11,0.3))' : 'none',
-            transition: 'all 0.3s ease'
-          }}>
-            {i < fullStars ? '⭐' : (i === fullStars && hasHalfStar ? '⭐' : '☆')}
-          </span>
-        ))}
-      </div>
-      <span style={{ 
-        fontWeight: 700, 
-        color: '#f59e0b', 
-        fontSize: '14px',
-        textShadow: '0 1px 2px rgba(0,0,0,0.1)'
-      }}>
-        {rating.toFixed(1)}
-      </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      {[1,2,3,4,5].map(i => (
+        <span key={i}
+          style={{ fontSize: '18px', cursor: interactive ? 'pointer' : 'default', color: i <= (hover || r) ? '#f59e0b' : '#d1d5db', transition: 'color .15s' }}
+          onMouseEnter={() => interactive && setHover(i)}
+          onMouseLeave={() => interactive && setHover(0)}
+          onClick={() => interactive && onChange && onChange(i)}
+        >★</span>
+      ))}
+      <span style={{ fontSize: '13px', fontWeight: 700, color: '#1a73e8', marginLeft: '4px' }}>{r.toFixed(1)}</span>
     </div>
   );
-};
+}
 
-export default function Hotels(){
+const FIELD = (label, val) => (
+  <div>
+    <label>{label}</label>
+    <div style={{ padding: '10px 14px', background: '#f0f7ff', borderRadius: '8px', color: '#1a2332', fontSize: '14px', fontWeight: 600, border: '1px solid #c5d8f5' }}>{val}</div>
+  </div>
+);
+
+export default function Hotels() {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('name');
+  const [minRating, setMinRating] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ name: '', location: '', rating: 0 });
+  const [viewHotel, setViewHotel] = useState(null);
+  const [selected, setSelected] = useState(new Set());
   const user = getUser();
   const isAdmin = user && user.role === 'admin';
 
-  useEffect(() => { load(); }, []);
+  const load = useCallback(async () => {
+    try { setLoading(true); const r = await api.get('/hotels'); setItems(r.data || []); }
+    catch(e) { toast('Failed to load hotels', 'error'); }
+    finally { setLoading(false); }
+  }, []);
 
-  async function load(){
-    try {
-      setLoading(true);
-      const res = await api.get('/hotels');
-      setItems(res.data || []);
-    } catch(e) {
-      console.error('Error loading hotels:', e);
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => { load(); }, [load]);
 
-  const filteredItems = items
-    .filter(h => h.name.toLowerCase().includes(search.toLowerCase()) || h.location.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
-      if (sortBy === 'rating') return b.rating - a.rating;
-      if (sortBy === 'location') return a.location.localeCompare(b.location);
-      return 0;
-    });
+  const filtered = items
+    .filter(h => (h.name.toLowerCase().includes(search.toLowerCase()) || h.location.toLowerCase().includes(search.toLowerCase())) && Number(h.rating||0) >= minRating)
+    .sort((a,b) => sortBy === 'rating' ? b.rating - a.rating : sortBy === 'location' ? a.location.localeCompare(b.location) : a.name.localeCompare(b.name));
 
-  function openCreateModal() {
-    setEditingItem(null);
-    setFormData({ name: '', location: '', rating: 0 });
-    setShowModal(true);
-  }
-
-  function openEditModal(h) {
-    setEditingItem(h);
-    setFormData({ name: h.name, location: h.location, rating: h.rating });
-    setShowModal(true);
-  }
+  function openCreate() { setEditingItem(null); setFormData({ name:'', location:'', rating:0 }); setShowModal(true); }
+  function openEdit(h) { setEditingItem(h); setFormData({ name:h.name, location:h.location, rating:h.rating }); setShowModal(true); }
 
   async function handleSave() {
-    if (!formData.name.trim()) {
-      alert('Hotel name is required');
-      return;
-    }
+    if (!formData.name.trim()) { toast('Hotel name is required', 'error'); return; }
+    setSaving(true);
     try {
-      if (editingItem) {
-        await api.put('/hotels/' + editingItem.id, formData);
-      } else {
-        await api.post('/hotels', formData);
-      }
-      load();
-      setShowModal(false);
-    } catch(e) {
-      alert('Error saving hotel');
-    }
+      if (editingItem) { await api.put('/hotels/'+editingItem.id, formData); toast('Hotel updated'); }
+      else { await api.post('/hotels', formData); toast('Hotel created'); }
+      load(); setShowModal(false); setEditingItem(null);
+    } catch(e) { toast('Error saving hotel', 'error'); }
+    finally { setSaving(false); }
   }
 
-  async function handleDelete(h){
-    if (!confirm('Delete hotel ' + h.name + '?')) return;
-    try {
-      await api.delete('/hotels/' + h.id);
-      load();
-    } catch(e) {
-      alert('Error deleting hotel');
-    }
+  async function handleDelete(h) {
+    if (!window.confirm(`Delete "${h.name}"?`)) return;
+    try { await api.delete('/hotels/'+h.id); toast('Hotel deleted'); load(); setSelected(s => { s.delete(h.id); return new Set(s); }); }
+    catch(e) { toast('Error deleting hotel', 'error'); }
   }
+
+  async function bulkDelete() {
+    if (!selected.size) return;
+    if (!window.confirm(`Delete ${selected.size} hotel(s)?`)) return;
+    try {
+      await Promise.all([...selected].map(id => api.delete('/hotels/'+id)));
+      toast(`Deleted ${selected.size} hotels`); setSelected(new Set()); load();
+    } catch(e) { toast('Error deleting hotels', 'error'); }
+  }
+
+  const toggleSelect = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll = () => setSelected(selected.size === filtered.length ? new Set() : new Set(filtered.map(h => h.id)));
+
+  const avgRating = items.length ? (items.reduce((s,h) => s + Number(h.rating||0), 0) / items.length).toFixed(1) : '0.0';
 
   return (
     <div className="page">
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        marginBottom: '40px',
-        flexWrap: 'wrap',
-        gap: '20px'
-      }}>
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px', flexWrap:'wrap', gap:'16px' }}>
         <div>
-          <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ 
-              fontSize: '42px',
-              filter: 'drop-shadow(0 4px 8px rgba(99,102,241,0.3))'
-            }}>🏨</span>
-            <span>Hotels</span>
-          </h2>
-          <p style={{ 
-            margin: '8px 0 0 0', 
-            color: 'var(--muted)', 
-            fontSize: '15px',
-            fontWeight: 500
-          }}>
-            Manage your hotel listings and accommodations
-          </p>
+          <h2 style={{ margin:0 }}>Hotels</h2>
+          <p style={{ margin:'6px 0 0', color:'#5f6b7a', fontSize:'13px' }}>{items.length} hotels · avg rating {avgRating} ★</p>
         </div>
-        {isAdmin && (
-          <button
-            onClick={openCreateModal}
-            className="btn"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '14px 28px',
-              fontSize: '14px'
-            }}
-          >
-            <span style={{ fontSize: '18px' }}>✨</span>
-            <span>Add Hotel</span>
+        <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+          <button onClick={() => exportCSV(filtered.map(h=>({ID:h.id,Name:h.name,Location:h.location,Rating:h.rating})), 'hotels.csv')}
+            style={{ padding:'9px 16px', borderRadius:'7px', background:'#e8f0fe', color:'#1a73e8', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'12px', cursor:'pointer', letterSpacing:'.5px', textTransform:'uppercase', boxShadow:'none' }}>
+            ↓ Export CSV
+          </button>
+          {isAdmin && selected.size > 0 && (
+            <button onClick={bulkDelete} style={{ padding:'9px 16px', borderRadius:'7px', background:'#fde8e8', color:'#d93025', border:'1px solid #fca5a5', fontWeight:700, fontSize:'12px', cursor:'pointer', letterSpacing:'.5px', textTransform:'uppercase', boxShadow:'none' }}>
+              Delete {selected.size} Selected
+            </button>
+          )}
+          {isAdmin && <button className="btn" onClick={openCreate} style={{ padding:'9px 18px', fontSize:'12px' }}>+ Add Hotel</button>}
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:'12px', marginBottom:'20px' }}>
+        {[
+          { label:'Total Hotels', value:items.length, color:'#1a73e8' },
+          { label:'Avg Rating', value:`${avgRating} ★`, color:'#f59e0b' },
+          { label:'Top Rated', value:items.filter(h=>Number(h.rating||0)>=4).length, color:'#1e8e3e' },
+          { label:'Locations', value:new Set(items.map(h=>h.location)).size, color:'#9333ea' },
+        ].map(s => (
+          <div key={s.label} className="card" style={{ padding:'16px', borderLeft:`3px solid ${s.color}`, margin:0 }}>
+            <div style={{ fontSize:'22px', fontWeight:900, color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:'11px', color:'#5f6b7a', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{ display:'flex', gap:'10px', marginBottom:'20px', flexWrap:'wrap', alignItems:'center', padding:'14px 16px', background:'#f0f7ff', borderRadius:'10px', border:'1px solid #c5d8f5' }}>
+        <input type="text" placeholder="Search by name or location..." value={search} onChange={e=>setSearch(e.target.value)} style={{ flex:1, minWidth:'180px' }} />
+        <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ minWidth:'150px' }}>
+          <option value="name">Sort: Name A–Z</option>
+          <option value="rating">Sort: Rating ↓</option>
+          <option value="location">Sort: Location</option>
+        </select>
+        <select value={minRating} onChange={e=>setMinRating(Number(e.target.value))} style={{ minWidth:'140px' }}>
+          <option value={0}>All Ratings</option>
+          <option value={3}>3★ & above</option>
+          <option value={4}>4★ & above</option>
+          <option value={4.5}>4.5★ & above</option>
+        </select>
+        {(search || minRating > 0) && (
+          <button onClick={() => { setSearch(''); setMinRating(0); }} style={{ padding:'9px 14px', borderRadius:'7px', background:'#fff', color:'#5f6b7a', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'11px', cursor:'pointer', boxShadow:'none', textTransform:'uppercase' }}>
+            Clear
           </button>
         )}
-      </div>
-      
-      <div style={{ 
-        display: 'flex', 
-        gap: '16px', 
-        marginBottom: '32px', 
-        flexWrap: 'wrap', 
-        alignItems: 'center',
-        padding: '20px',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-        borderRadius: '16px',
-        border: '2px solid rgba(99,102,241,0.1)',
-        boxShadow: '0 4px 20px rgba(99,102,241,0.08)'
-      }}>
-        <input
-          type="text"
-          placeholder="🔍 Search hotels by name or location..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            flex: 1,
-            minWidth: '250px',
-            padding: '14px 20px',
-            border: '2px solid #e2e8f0',
-            borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: 600,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            background: '#fff',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = '#8b5cf6';
-            e.target.style.boxShadow = '0 0 0 4px rgba(139,92,246,0.15), 0 4px 12px rgba(0,0,0,0.08)';
-            e.target.style.transform = 'translateY(-2px)';
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = '#e2e8f0';
-            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-            e.target.style.transform = 'translateY(0)';
-          }}
-        />
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          style={{
-            padding: '14px 20px',
-            border: '2px solid #e2e8f0',
-            borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            background: '#fff',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            minWidth: '180px'
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = '#8b5cf6';
-            e.target.style.boxShadow = '0 0 0 4px rgba(139,92,246,0.15), 0 4px 12px rgba(0,0,0,0.08)';
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = '#e2e8f0';
-            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-          }}
-        >
-          <option value="name">📝 Sort by Name</option>
-          <option value="rating">⭐ Sort by Rating</option>
-          <option value="location">📍 Sort by Location</option>
-        </select>
+        <span style={{ fontSize:'12px', color:'#5f6b7a', fontWeight:600 }}>{filtered.length} result{filtered.length!==1?'s':''}</span>
       </div>
 
       {loading ? (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          minHeight: '400px',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.3) 100%)',
-          borderRadius: '20px',
-          border: '2px dashed rgba(99,102,241,0.2)'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <Spinner size="md" />
-            <p style={{ 
-              marginTop: '20px', 
-              color: 'var(--muted)',
-              fontSize: '16px',
-              fontWeight: 600
-            }}>
-              Loading amazing hotels...
-            </p>
-          </div>
-        </div>
-      ) : filteredItems.length === 0 ? (
-        <EmptyState
-          icon="🏨"
-          title={search ? "No hotels found" : "No hotels yet"}
-          description={search ? "Try adjusting your search filters." : "Start by creating your first hotel!"}
-          action={isAdmin && !search && (
-            <button
-              onClick={openCreateModal}
-              className="btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                margin: '0 auto'
-              }}
-            >
-              <span style={{ fontSize: '18px' }}>✨</span>
-              <span>Create First Hotel</span>
-            </button>
-          )}
-        />
+        <div style={{ display:'flex', justifyContent:'center', padding:'60px 0' }}><Spinner /></div>
+      ) : filtered.length === 0 ? (
+        <EmptyState icon="🏨" title={search||minRating>0?'No hotels match':'No hotels yet'} description={search||minRating>0?'Try different filters.':'Add your first hotel.'} action={isAdmin&&!search&&<button className="btn" onClick={openCreate}>Add Hotel</button>} />
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-          gap: '24px'
-        }}>
-          {filteredItems.map((h, idx) => (
-            <div 
-              key={h.id} 
-              className="card" 
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                animation: `slideInUp 0.5s ease ${idx * 0.08}s backwards`,
-                position: 'relative',
-                overflow: 'hidden',
-                minHeight: '220px',
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-12px) scale(1.02)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-              }}
-            >
-              <div style={{
-                position: 'absolute',
-                top: '12px',
-                right: '12px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                color: '#fff',
-                padding: '6px 12px',
-                borderRadius: '20px',
-                fontSize: '11px',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                boxShadow: '0 4px 12px rgba(99,102,241,0.4)',
-                border: '2px solid rgba(255,255,255,0.3)'
-              }}>
-                Hotel
-              </div>
-              
-              <div>
-                <h3 style={{ 
-                  margin: '0 0 12px 0', 
-                  color: 'var(--text)',
-                  fontSize: '22px',
-                  fontWeight: 800,
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  paddingRight: '80px'
-                }}>
-                  {h.name}
-                </h3>
-                
-                <div style={{ 
-                  marginBottom: '16px', 
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 14px',
-                  background: 'linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(139,92,246,0.05) 100%)',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(99,102,241,0.1)'
-                }}>
-                  <span style={{ fontSize: '18px' }}>📍</span>
-                  <span style={{ 
-                    color: 'var(--muted)', 
-                    fontSize: '14px',
-                    fontWeight: 600
-                  }}>
-                    {h.location}
-                  </span>
-                </div>
-                
-                <RatingStars rating={h.rating} />
-              </div>
-              
-              {isAdmin && (
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '10px', 
-                  marginTop: '20px',
-                  paddingTop: '16px',
-                  borderTop: '2px solid rgba(99,102,241,0.1)'
-                }}>
-                  <button
-                    onClick={() => openEditModal(h)}
-                    style={{
-                      flex: 1,
-                      padding: '12px 16px',
-                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 8px 20px rgba(99,102,241,0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(99,102,241,0.3)';
-                    }}
-                  >
-                    <span>✏️</span> Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(h)}
-                    style={{
-                      flex: 1,
-                      padding: '12px 16px',
-                      background: 'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: '0 4px 12px rgba(244,63,94,0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 8px 20px rgba(244,63,94,0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(244,63,94,0.3)';
-                    }}
-                  >
-                    <span>🗑️</span> Delete
-                  </button>
-                </div>
-              )}
+        <>
+          {isAdmin && (
+            <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
+              <input type="checkbox" checked={selected.size===filtered.length&&filtered.length>0} onChange={toggleAll} style={{ width:'16px', height:'16px', cursor:'pointer' }} />
+              <span style={{ fontSize:'12px', color:'#5f6b7a', fontWeight:600 }}>{selected.size>0?`${selected.size} selected`:'Select all'}</span>
             </div>
-          ))}
-        </div>
+          )}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:'16px' }}>
+            {filtered.map((h, idx) => (
+              <div key={h.id} className="card" style={{ padding:'20px', animation:`slideInUp .3s ease ${idx*.04}s backwards`, position:'relative', borderLeft: selected.has(h.id)?'3px solid #1a73e8':'3px solid transparent' }}
+                onMouseEnter={e=>e.currentTarget.style.transform='translateY(-4px)'}
+                onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
+                {isAdmin && (
+                  <input type="checkbox" checked={selected.has(h.id)} onChange={()=>toggleSelect(h.id)}
+                    style={{ position:'absolute', top:'14px', right:'14px', width:'16px', height:'16px', cursor:'pointer' }} />
+                )}
+                <div style={{ marginBottom:'10px' }}>
+                  <h3 style={{ margin:'0 0 4px', fontSize:'15px', fontWeight:800, color:'#1a2332', paddingRight:'24px' }}>{h.name}</h3>
+                  <div style={{ fontSize:'12px', color:'#5f6b7a', display:'flex', alignItems:'center', gap:'4px' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {h.location}
+                  </div>
+                </div>
+                <StarRating rating={h.rating} />
+                {isAdmin && (
+                  <div style={{ display:'flex', gap:'6px', marginTop:'14px', paddingTop:'12px', borderTop:'1px solid #e8f0fe' }}>
+                    <button onClick={()=>setViewHotel(h)} style={{ flex:1, padding:'7px', borderRadius:'6px', background:'#e8f0fe', color:'#1a73e8', border:'none', fontWeight:700, fontSize:'11px', cursor:'pointer', textTransform:'uppercase', letterSpacing:'.5px', boxShadow:'none' }}>View</button>
+                    <button onClick={()=>openEdit(h)} style={{ flex:1, padding:'7px', borderRadius:'6px', background:'#fef3c7', color:'#d97706', border:'none', fontWeight:700, fontSize:'11px', cursor:'pointer', textTransform:'uppercase', letterSpacing:'.5px', boxShadow:'none' }}>Edit</button>
+                    <button onClick={()=>handleDelete(h)} style={{ flex:1, padding:'7px', borderRadius:'6px', background:'#fee2e2', color:'#d93025', border:'none', fontWeight:700, fontSize:'11px', cursor:'pointer', textTransform:'uppercase', letterSpacing:'.5px', boxShadow:'none' }}>Delete</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
-      <Modal
-        isOpen={showModal}
-        title={editingItem ? '✏️ Edit Hotel' : '✨ Add New Hotel'}
-        onClose={() => setShowModal(false)}
-      >
-        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: 700, 
-              fontSize: '14px',
-              color: 'var(--text)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              🏨 Hotel Name *
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter hotel name"
-              required
-              style={{
-                width: '100%',
-                padding: '14px 18px',
-                fontSize: '14px',
-                fontWeight: 600
-              }}
-            />
+      {/* View Modal */}
+      <Modal isOpen={!!viewHotel} title={viewHotel?.name||''} onClose={()=>setViewHotel(null)}>
+        {viewHotel && (
+          <div style={{ display:'flex', flexDirection:'column', gap:'14px', minWidth:'340px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+              {FIELD('Hotel ID', `#${viewHotel.id}`)}
+              <div><label>Rating</label><div style={{ padding:'10px 14px', background:'#f0f7ff', borderRadius:'8px', border:'1px solid #c5d8f5' }}><StarRating rating={viewHotel.rating} /></div></div>
+            </div>
+            {FIELD('Location', viewHotel.location)}
+            <div style={{ display:'flex', gap:'8px', justifyContent:'flex-end', marginTop:'8px' }}>
+              <button onClick={()=>setViewHotel(null)} style={{ padding:'9px 18px', borderRadius:'7px', background:'#f0f7ff', color:'#5f6b7a', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'12px', cursor:'pointer', boxShadow:'none', textTransform:'uppercase' }}>Close</button>
+              {isAdmin && <button className="btn" onClick={()=>{setViewHotel(null);openEdit(viewHotel);}}>Edit</button>}
+            </div>
           </div>
+        )}
+      </Modal>
+
+      {/* Create/Edit Modal */}
+      <Modal isOpen={showModal} title={editingItem?'Edit Hotel':'Add Hotel'} onClose={()=>{setShowModal(false);setEditingItem(null);}}>
+        <form onSubmit={e=>{e.preventDefault();handleSave();}} style={{ display:'flex', flexDirection:'column', gap:'14px', minWidth:'340px' }}>
+          <div><label>Hotel Name *</label><input type="text" value={formData.name} onChange={e=>setFormData({...formData,name:e.target.value})} placeholder="e.g. Grand Palace Hotel" required autoFocus /></div>
+          <div><label>Location *</label><input type="text" value={formData.location} onChange={e=>setFormData({...formData,location:e.target.value})} placeholder="City, Country" required /></div>
           <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: 700, 
-              fontSize: '14px',
-              color: 'var(--text)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              📍 Location
-            </label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              placeholder="Enter location"
-              style={{
-                width: '100%',
-                padding: '14px 18px',
-                fontSize: '14px',
-                fontWeight: 600
-              }}
-            />
+            <label>Rating (click to set)</label>
+            <StarRating rating={formData.rating} interactive onChange={v=>setFormData({...formData,rating:v})} />
+            <input type="range" min="0" max="5" step="0.5" value={formData.rating} onChange={e=>setFormData({...formData,rating:parseFloat(e.target.value)})} style={{ width:'100%', marginTop:'8px' }} />
           </div>
-          <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: 700, 
-              fontSize: '14px',
-              color: 'var(--text)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              ⭐ Rating (1-5)
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="5"
-              step="0.1"
-              value={formData.rating}
-              onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 0 })}
-              placeholder="Enter rating"
-              style={{
-                width: '100%',
-                padding: '14px 18px',
-                fontSize: '14px',
-                fontWeight: 600
-              }}
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-            <button
-              type="submit"
-              className="btn"
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <span>💾</span> Save Hotel
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowModal(false)}
-              style={{
-                flex: 1,
-                padding: '14px 20px',
-                background: 'linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)',
-                color: '#374151',
-                border: 'none',
-                borderRadius: '10px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontSize: '14px',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'none';
-              }}
-            >
-              Cancel
-            </button>
+          <div style={{ display:'flex', gap:'8px', marginTop:'4px' }}>
+            <button type="submit" style={{ flex:1 }} disabled={saving}>{saving?'Saving…':editingItem?'Update Hotel':'Create Hotel'}</button>
+            <button type="button" onClick={()=>{setShowModal(false);setEditingItem(null);}} style={{ flex:1, background:'#f0f7ff', color:'#5f6b7a', border:'1px solid #c5d8f5', boxShadow:'none' }}>Cancel</button>
           </div>
         </form>
       </Modal>

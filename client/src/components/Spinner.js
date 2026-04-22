@@ -1,22 +1,20 @@
 import React from 'react';
 
 export default function Spinner({ size = 'md' }) {
-  const sizes = {
-    sm: { size: 20, border: 2 },
-    md: { size: 40, border: 3 },
-    lg: { size: 60, border: 4 }
-  };
-
-  const s = sizes[size];
+  const sizes = { sm: 20, md: 36, lg: 52 };
+  const s = sizes[size] || 36;
+  const b = size === 'sm' ? 2 : size === 'lg' ? 4 : 3;
 
   return (
-    <div style={{
-      width: s.size,
-      height: s.size,
-      border: `${s.border}px solid rgba(59, 130, 246, 0.2)`,
-      borderTop: `${s.border}px solid #3b82f6`,
-      borderRadius: '50%',
-      animation: 'spin 1s linear infinite'
-    }} />
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+      <div style={{
+        width: s, height: s,
+        border: `${b}px solid rgba(201,168,76,0.15)`,
+        borderTop: `${b}px solid #c9a84c`,
+        borderRight: `${b}px solid rgba(201,168,76,0.4)`,
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+      }} />
+    </div>
   );
 }

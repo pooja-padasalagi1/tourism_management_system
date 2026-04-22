@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const hotelRoutes = require('./routes/hotels');
 const tourRoutes = require('./routes/tours');
+const tourPackageRoutes = require('./routes/tourPackages');
 const bookingRoutes = require('./routes/bookings');
 
 const app = express();
@@ -37,6 +38,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/hotels', hotelRoutes);
 app.use('/api/tours', tourRoutes);
+app.use('/api/tour-packages', tourPackageRoutes);
 app.use('/api/bookings', bookingRoutes);
 
 app.get('/api/ping', (req, res) => res.json({ ok: true }));

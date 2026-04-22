@@ -1,51 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import api from '../api';
 import { getUser } from '../auth';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import Spinner from '../components/Spinner';
 
-const PriceBadge = ({ price }) => {
-  const p = Number(price || 0);
-  let category, gradient, icon;
-  
-  if (p < 500) {
-    category = 'Budget';
-    gradient = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)';
-    icon = '💚';
-  } else if (p < 1500) {
-    category = 'Mid-Range';
-    gradient = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
-    icon = '🟡';
-  } else {
-    category = 'Luxury';
-    gradient = 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)';
-    icon = '💜';
-  }
-  
-  return (
-    <div style={{
-      background: gradient,
-      color: '#fff',
-      padding: '6px 14px',
-      borderRadius: '20px',
-      fontSize: '12px',
-      fontWeight: 800,
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-      border: '2px solid rgba(255,255,255,0.3)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px'
-    }}>
-      <span>{icon}</span>
-      <span>{category}</span>
-    </div>
-  );
-};
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  const c = {success:'#1e8e3e',error:'#d93025',info:'#1a73e8'};
+  el.style.cssText=`position:fixed;top:80px;right:24px;z-index:9999;padding:14px 20px;border-radius:8px;font-weight:700;font-size:13px;color:#fff;background:${c[type]||c.success};box-shadow:0 8px 24px rgba(0,0,0,.2);animation:slideInRight .3s ease;min-width:240px;`;
+  el.textContent=msg; document.body.appendChild(el); setTimeout(()=>el.remove(),3000);
+}
 
-export default function Tours(){
+function exportCSV(data, filename) {
+  if (!data.length) return toast('Nothing to export','info');
+  const keys = Object.keys(data[0]);
+  const csv = [keys.join(','),...data.map(r=>keys.map(k=>`"${String(r[k]??'').replace(/"/g,'""')}"`).join(','))].join('\n');
+  const a = document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=filename; a.click();
+  toast(`Exported ${data.length} rows`);
+}
+
+function PriceTier({ price }) {
+  const p = Number(price||0);
+  const [label,color] = p<500?['Budget','#1e8e3e']:p<1500?['Mid-Range','#d97706']:['Luxury','#7c3aed'];
+  return <span style={{ padding:'3px 10px', borderRadius:'4px', fontSize:'10px', fontWeight:800, letterSpacing:'1px', textTransform:'uppercase', background:`${color}18`, color, border:`1px solid ${color}30` }}>{label}</span>;
+}
+
+export default function Tours() {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('title');
@@ -53,574 +34,190 @@ export default function Tours(){
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({ title: '', description: '', price: 0 });
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({ title:'', description:'', price:0 });
+  const [viewTour, setViewTour] = useState(null);
+  const [selected, setSelected] = useState(new Set());
   const user = getUser();
   const isAdmin = user && user.role === 'admin';
 
-  useEffect(() => { load(); }, []);
+  const load = useCallback(async () => {
+    try { setLoading(true); const r = await api.get('/tours'); setItems(r.data||[]); }
+    catch(e) { toast('Failed to load tours','error'); }
+    finally { setLoading(false); }
+  }, []);
 
-  async function load(){
-    try {
-      setLoading(true);
-      const res = await api.get('/tours');
-      setItems(res.data || []);
-    } catch(e) {
-      console.error('Error loading tours:', e);
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => { load(); }, [load]);
 
-  const filteredItems = items
-    .filter(t => t.title.toLowerCase().includes(search.toLowerCase()) || (t.description && t.description.toLowerCase().includes(search.toLowerCase())))
-    .filter(t => {
-      const p = Number(t.price || 0);
-      if (priceFilter === 'budget') return p < 500;
-      if (priceFilter === 'mid') return p >= 500 && p < 1500;
-      if (priceFilter === 'luxury') return p >= 1500;
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'title') return a.title.localeCompare(b.title);
-      if (sortBy === 'price') return Number(a.price || 0) - Number(b.price || 0);
-      if (sortBy === 'price-desc') return Number(b.price || 0) - Number(a.price || 0);
-      return 0;
-    });
+  const filtered = items
+    .filter(t => t.title.toLowerCase().includes(search.toLowerCase()) || (t.description||'').toLowerCase().includes(search.toLowerCase()))
+    .filter(t => { const p=Number(t.price||0); if(priceFilter==='budget') return p<500; if(priceFilter==='mid') return p>=500&&p<1500; if(priceFilter==='luxury') return p>=1500; return true; })
+    .sort((a,b) => sortBy==='price'?Number(a.price||0)-Number(b.price||0):sortBy==='price-desc'?Number(b.price||0)-Number(a.price||0):a.title.localeCompare(b.title));
 
-  function openCreateModal() {
-    setEditingItem(null);
-    setFormData({ title: '', description: '', price: 0 });
-    setShowModal(true);
-  }
-
-  function openEditModal(t) {
-    setEditingItem(t);
-    setFormData({ title: t.title, description: t.description, price: Number(t.price) || 0 });
-    setShowModal(true);
-  }
+  function openCreate() { setEditingItem(null); setFormData({title:'',description:'',price:0}); setShowModal(true); }
+  function openEdit(t) { setEditingItem(t); setFormData({title:t.title,description:t.description||'',price:Number(t.price)||0}); setShowModal(true); }
 
   async function handleSave() {
-    if (!formData.title.trim()) {
-      alert('Tour title is required');
-      return;
-    }
+    if (!formData.title.trim()) { toast('Tour title is required','error'); return; }
+    setSaving(true);
     try {
-      if (editingItem) {
-        await api.put('/tours/' + editingItem.id, formData);
-      } else {
-        await api.post('/tours', formData);
-      }
-      load();
-      setShowModal(false);
-    } catch(e) {
-      alert('Error saving tour');
-    }
+      if (editingItem) { await api.put('/tours/'+editingItem.id, formData); toast('Tour updated'); }
+      else { await api.post('/tours', formData); toast('Tour created'); }
+      load(); setShowModal(false); setEditingItem(null);
+    } catch(e) { toast('Error saving tour','error'); }
+    finally { setSaving(false); }
   }
 
-  async function handleDelete(t){
-    if (!confirm('Delete tour ' + t.title + '?')) return;
-    try {
-      await api.delete('/tours/' + t.id);
-      load();
-    } catch(e) {
-      alert('Error deleting tour');
-    }
+  async function handleDelete(t) {
+    if (!window.confirm(`Delete "${t.title}"?`)) return;
+    try { await api.delete('/tours/'+t.id); toast('Tour deleted'); load(); setSelected(s=>{s.delete(t.id);return new Set(s);}); }
+    catch(e) { toast('Error deleting tour','error'); }
   }
+
+  async function bulkDelete() {
+    if (!selected.size) return;
+    if (!window.confirm(`Delete ${selected.size} tour(s)?`)) return;
+    try { await Promise.all([...selected].map(id=>api.delete('/tours/'+id))); toast(`Deleted ${selected.size} tours`); setSelected(new Set()); load(); }
+    catch(e) { toast('Error deleting tours','error'); }
+  }
+
+  const toggleSelect = id => setSelected(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n;});
+  const toggleAll = () => setSelected(selected.size===filtered.length?new Set():new Set(filtered.map(t=>t.id)));
+
+  const totalRevenue = items.reduce((s,t)=>s+Number(t.price||0),0);
+  const avgPrice = items.length ? (totalRevenue/items.length).toFixed(0) : 0;
 
   return (
     <div className="page">
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        marginBottom: '40px',
-        flexWrap: 'wrap',
-        gap: '20px'
-      }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px', flexWrap:'wrap', gap:'16px' }}>
         <div>
-          <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ 
-              fontSize: '42px',
-              filter: 'drop-shadow(0 4px 8px rgba(99,102,241,0.3))'
-            }}>✈️</span>
-            <span>Tours</span>
-          </h2>
-          <p style={{ 
-            margin: '8px 0 0 0', 
-            color: 'var(--muted)', 
-            fontSize: '15px',
-            fontWeight: 500
-          }}>
-            Discover and manage amazing travel experiences
-          </p>
+          <h2 style={{ margin:0 }}>Tours</h2>
+          <p style={{ margin:'6px 0 0', color:'#5f6b7a', fontSize:'13px' }}>{items.length} tours · avg price ${avgPrice}</p>
         </div>
-        {isAdmin && (
-          <button
-            onClick={openCreateModal}
-            className="btn"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '14px 28px',
-              fontSize: '14px'
-            }}
-          >
-            <span style={{ fontSize: '18px' }}>✨</span>
-            <span>Add Tour</span>
+        <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+          <button onClick={()=>exportCSV(filtered.map(t=>({ID:t.id,Title:t.title,Description:t.description||'',Price:t.price})),'tours.csv')}
+            style={{ padding:'9px 16px', borderRadius:'7px', background:'#e8f0fe', color:'#1a73e8', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'12px', cursor:'pointer', letterSpacing:'.5px', textTransform:'uppercase', boxShadow:'none' }}>
+            ↓ Export CSV
           </button>
-        )}
+          {isAdmin && selected.size>0 && (
+            <button onClick={bulkDelete} style={{ padding:'9px 16px', borderRadius:'7px', background:'#fde8e8', color:'#d93025', border:'1px solid #fca5a5', fontWeight:700, fontSize:'12px', cursor:'pointer', letterSpacing:'.5px', textTransform:'uppercase', boxShadow:'none' }}>
+              Delete {selected.size} Selected
+            </button>
+          )}
+          {isAdmin && <button className="btn" onClick={openCreate} style={{ padding:'9px 18px', fontSize:'12px' }}>+ Add Tour</button>}
+        </div>
       </div>
-      
-      <div style={{ 
-        display: 'flex', 
-        gap: '16px', 
-        marginBottom: '32px', 
-        flexWrap: 'wrap', 
-        alignItems: 'center',
-        padding: '20px',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-        borderRadius: '16px',
-        border: '2px solid rgba(99,102,241,0.1)',
-        boxShadow: '0 4px 20px rgba(99,102,241,0.08)'
-      }}>
-        <input
-          type="text"
-          placeholder="🔍 Search tours by title or description..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            flex: 1,
-            minWidth: '250px',
-            padding: '14px 20px',
-            border: '2px solid #e2e8f0',
-            borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: 600,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            background: '#fff',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = '#8b5cf6';
-            e.target.style.boxShadow = '0 0 0 4px rgba(139,92,246,0.15), 0 4px 12px rgba(0,0,0,0.08)';
-            e.target.style.transform = 'translateY(-2px)';
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = '#e2e8f0';
-            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-            e.target.style.transform = 'translateY(0)';
-          }}
-        />
-        <select
-          value={priceFilter}
-          onChange={(e) => setPriceFilter(e.target.value)}
-          style={{
-            padding: '14px 20px',
-            border: '2px solid #e2e8f0',
-            borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            background: '#fff',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            minWidth: '160px'
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = '#8b5cf6';
-            e.target.style.boxShadow = '0 0 0 4px rgba(139,92,246,0.15), 0 4px 12px rgba(0,0,0,0.08)';
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = '#e2e8f0';
-            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-          }}
-        >
-          <option value="all">💰 All Prices</option>
-          <option value="budget">💚 Budget</option>
-          <option value="mid">🟡 Mid-Range</option>
-          <option value="luxury">💜 Luxury</option>
+
+      {/* Stats */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:'12px', marginBottom:'20px' }}>
+        {[
+          { label:'Total Tours', value:items.length, color:'#1a73e8' },
+          { label:'Total Revenue', value:`$${totalRevenue.toLocaleString()}`, color:'#1e8e3e' },
+          { label:'Avg Price', value:`$${avgPrice}`, color:'#d97706' },
+          { label:'Luxury Tours', value:items.filter(t=>Number(t.price||0)>=1500).length, color:'#7c3aed' },
+        ].map(s=>(
+          <div key={s.label} className="card" style={{ padding:'16px', borderLeft:`3px solid ${s.color}`, margin:0 }}>
+            <div style={{ fontSize:'20px', fontWeight:900, color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:'11px', color:'#5f6b7a', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginTop:'3px' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{ display:'flex', gap:'10px', marginBottom:'20px', flexWrap:'wrap', alignItems:'center', padding:'14px 16px', background:'#f0f7ff', borderRadius:'10px', border:'1px solid #c5d8f5' }}>
+        <input type="text" placeholder="Search tours..." value={search} onChange={e=>setSearch(e.target.value)} style={{ flex:1, minWidth:'180px' }} />
+        <select value={priceFilter} onChange={e=>setPriceFilter(e.target.value)} style={{ minWidth:'150px' }}>
+          <option value="all">All Prices</option>
+          <option value="budget">Budget (&lt;$500)</option>
+          <option value="mid">Mid ($500–$1500)</option>
+          <option value="luxury">Luxury ($1500+)</option>
         </select>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          style={{
-            padding: '14px 20px',
-            border: '2px solid #e2e8f0',
-            borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            background: '#fff',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            minWidth: '180px'
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = '#8b5cf6';
-            e.target.style.boxShadow = '0 0 0 4px rgba(139,92,246,0.15), 0 4px 12px rgba(0,0,0,0.08)';
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = '#e2e8f0';
-            e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-          }}
-        >
-          <option value="title">📝 Sort by Title</option>
-          <option value="price">💵 Price: Low to High</option>
-          <option value="price-desc">💎 Price: High to Low</option>
+        <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ minWidth:'160px' }}>
+          <option value="title">Sort: Title A–Z</option>
+          <option value="price">Price: Low → High</option>
+          <option value="price-desc">Price: High → Low</option>
         </select>
+        {(search||priceFilter!=='all') && (
+          <button onClick={()=>{setSearch('');setPriceFilter('all');}} style={{ padding:'9px 14px', borderRadius:'7px', background:'#fff', color:'#5f6b7a', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'11px', cursor:'pointer', boxShadow:'none', textTransform:'uppercase' }}>Clear</button>
+        )}
+        <span style={{ fontSize:'12px', color:'#5f6b7a', fontWeight:600 }}>{filtered.length} result{filtered.length!==1?'s':''}</span>
       </div>
 
       {loading ? (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          minHeight: '400px',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.3) 100%)',
-          borderRadius: '20px',
-          border: '2px dashed rgba(99,102,241,0.2)'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <Spinner size="md" />
-            <p style={{ 
-              marginTop: '20px', 
-              color: 'var(--muted)',
-              fontSize: '16px',
-              fontWeight: 600
-            }}>
-              Loading amazing tours...
-            </p>
-          </div>
-        </div>
-      ) : filteredItems.length === 0 ? (
-        <EmptyState
-          icon="✈️"
-          title={search || priceFilter !== 'all' ? "No tours found" : "No tours yet"}
-          description={search || priceFilter !== 'all' ? "Try adjusting your search or filters." : "Start by creating your first tour!"}
-          action={isAdmin && !search && priceFilter === 'all' && (
-            <button
-              onClick={openCreateModal}
-              className="btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                margin: '0 auto'
-              }}
-            >
-              <span style={{ fontSize: '18px' }}>✨</span>
-              <span>Create First Tour</span>
-            </button>
-          )}
-        />
+        <div style={{ display:'flex', justifyContent:'center', padding:'60px 0' }}><Spinner /></div>
+      ) : filtered.length===0 ? (
+        <EmptyState icon="✈️" title={search||priceFilter!=='all'?'No tours match':'No tours yet'} description={search||priceFilter!=='all'?'Try different filters.':'Create your first tour.'} action={isAdmin&&!search&&priceFilter==='all'&&<button className="btn" onClick={openCreate}>Add Tour</button>} />
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-          gap: '24px'
-        }}>
-          {filteredItems.map((t, idx) => (
-            <div 
-              key={t.id} 
-              className="card" 
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                animation: `slideInUp 0.5s ease ${idx * 0.08}s backwards`,
-                position: 'relative',
-                overflow: 'hidden',
-                minHeight: '280px',
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-12px) scale(1.02)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-              }}
-            >
-              <div style={{
-                position: 'absolute',
-                top: '12px',
-                right: '12px',
-                zIndex: 10
-              }}>
-                <PriceBadge price={t.price} />
-              </div>
-              
-              <div>
-                <h3 style={{ 
-                  margin: '0 0 12px 0', 
-                  color: 'var(--text)',
-                  fontSize: '22px',
-                  fontWeight: 800,
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  paddingRight: '100px',
-                  lineHeight: '1.3'
-                }}>
-                  {t.title}
-                </h3>
-                
-                {t.description && (
-                  <p style={{ 
-                    margin: '0 0 16px 0', 
-                    color: 'var(--muted)', 
-                    fontSize: '14px', 
-                    lineHeight: '1.6',
-                    fontWeight: 500,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>
-                    {t.description}
-                  </p>
-                )}
-                
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 16px',
-                  background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.08) 100%)',
-                  borderRadius: '12px',
-                  border: '2px solid rgba(99,102,241,0.15)',
-                  marginTop: '12px'
-                }}>
-                  <span style={{ fontSize: '24px' }}>💰</span>
-                  <div>
-                    <div style={{ 
-                      fontSize: '11px', 
-                      color: 'var(--muted)', 
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Price
-                    </div>
-                    <div style={{ 
-                      fontSize: '26px', 
-                      fontWeight: 900,
-                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      lineHeight: '1'
-                    }}>
-                      ${Number(t.price || 0).toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {isAdmin && (
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '10px', 
-                  marginTop: '20px',
-                  paddingTop: '16px',
-                  borderTop: '2px solid rgba(99,102,241,0.1)'
-                }}>
-                  <button
-                    onClick={() => openEditModal(t)}
-                    style={{
-                      flex: 1,
-                      padding: '12px 16px',
-                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 8px 20px rgba(99,102,241,0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(99,102,241,0.3)';
-                    }}
-                  >
-                    <span>✏️</span> Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(t)}
-                    style={{
-                      flex: 1,
-                      padding: '12px 16px',
-                      background: 'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: '0 4px 12px rgba(244,63,94,0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 8px 20px rgba(244,63,94,0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(244,63,94,0.3)';
-                    }}
-                  >
-                    <span>🗑️</span> Delete
-                  </button>
-                </div>
-              )}
+        <>
+          {isAdmin && (
+            <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
+              <input type="checkbox" checked={selected.size===filtered.length&&filtered.length>0} onChange={toggleAll} style={{ width:'16px', height:'16px', cursor:'pointer' }} />
+              <span style={{ fontSize:'12px', color:'#5f6b7a', fontWeight:600 }}>{selected.size>0?`${selected.size} selected`:'Select all'}</span>
             </div>
-          ))}
-        </div>
+          )}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:'16px' }}>
+            {filtered.map((t,idx)=>(
+              <div key={t.id} className="card" style={{ padding:'20px', display:'flex', flexDirection:'column', animation:`slideInUp .3s ease ${idx*.04}s backwards`, position:'relative', borderLeft:selected.has(t.id)?'3px solid #1a73e8':'3px solid transparent' }}
+                onMouseEnter={e=>e.currentTarget.style.transform='translateY(-4px)'}
+                onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
+                {isAdmin && <input type="checkbox" checked={selected.has(t.id)} onChange={()=>toggleSelect(t.id)} style={{ position:'absolute', top:'14px', right:'14px', width:'16px', height:'16px', cursor:'pointer' }} />}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px' }}>
+                  <h3 style={{ margin:0, fontSize:'15px', fontWeight:800, color:'#1a2332', flex:1, paddingRight:'24px', lineHeight:'1.3' }}>{t.title}</h3>
+                </div>
+                <PriceTier price={t.price} />
+                {t.description && <p style={{ margin:'10px 0', color:'#5f6b7a', fontSize:'13px', lineHeight:'1.5', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{t.description}</p>}
+                <div style={{ marginTop:'auto', padding:'10px 12px', background:'#f0f7ff', borderRadius:'6px', border:'1px solid #c5d8f5', display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
+                  <span style={{ fontSize:'11px', color:'#5f6b7a', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px' }}>Price</span>
+                  <span style={{ fontSize:'20px', fontWeight:900, color:'#1a73e8' }}>${Number(t.price||0).toLocaleString()}</span>
+                </div>
+                {isAdmin && (
+                  <div style={{ display:'flex', gap:'6px', paddingTop:'12px', borderTop:'1px solid #e8f0fe' }}>
+                    <button onClick={()=>setViewTour(t)} style={{ flex:1, padding:'7px', borderRadius:'6px', background:'#e8f0fe', color:'#1a73e8', border:'none', fontWeight:700, fontSize:'11px', cursor:'pointer', textTransform:'uppercase', letterSpacing:'.5px', boxShadow:'none' }}>View</button>
+                    <button onClick={()=>openEdit(t)} style={{ flex:1, padding:'7px', borderRadius:'6px', background:'#fef3c7', color:'#d97706', border:'none', fontWeight:700, fontSize:'11px', cursor:'pointer', textTransform:'uppercase', letterSpacing:'.5px', boxShadow:'none' }}>Edit</button>
+                    <button onClick={()=>handleDelete(t)} style={{ flex:1, padding:'7px', borderRadius:'6px', background:'#fee2e2', color:'#d93025', border:'none', fontWeight:700, fontSize:'11px', cursor:'pointer', textTransform:'uppercase', letterSpacing:'.5px', boxShadow:'none' }}>Delete</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
-      <Modal
-        isOpen={showModal}
-        title={editingItem ? '✏️ Edit Tour' : '✨ Add New Tour'}
-        onClose={() => setShowModal(false)}
-      >
-        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: 700, 
-              fontSize: '14px',
-              color: 'var(--text)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              ✈️ Tour Title *
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Enter tour title"
-              required
-              style={{
-                width: '100%',
-                padding: '14px 18px',
-                fontSize: '14px',
-                fontWeight: 600
-              }}
-            />
+      {/* View Modal */}
+      <Modal isOpen={!!viewTour} title={viewTour?.title||''} onClose={()=>setViewTour(null)}>
+        {viewTour && (
+          <div style={{ display:'flex', flexDirection:'column', gap:'14px', minWidth:'340px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <PriceTier price={viewTour.price} />
+              <span style={{ fontSize:'24px', fontWeight:900, color:'#1a73e8' }}>${Number(viewTour.price||0).toLocaleString()}</span>
+            </div>
+            {viewTour.description && (
+              <div>
+                <label>Description</label>
+                <div style={{ padding:'10px 14px', background:'#f0f7ff', borderRadius:'8px', color:'#1a2332', fontSize:'14px', lineHeight:'1.6', border:'1px solid #c5d8f5' }}>{viewTour.description}</div>
+              </div>
+            )}
+            <div style={{ display:'flex', gap:'8px', justifyContent:'flex-end', marginTop:'8px' }}>
+              <button onClick={()=>setViewTour(null)} style={{ padding:'9px 18px', borderRadius:'7px', background:'#f0f7ff', color:'#5f6b7a', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'12px', cursor:'pointer', boxShadow:'none', textTransform:'uppercase' }}>Close</button>
+              {isAdmin && <button className="btn" onClick={()=>{setViewTour(null);openEdit(viewTour);}}>Edit</button>}
+            </div>
           </div>
+        )}
+      </Modal>
+
+      {/* Create/Edit Modal */}
+      <Modal isOpen={showModal} title={editingItem?'Edit Tour':'Add Tour'} onClose={()=>setShowModal(false)}>
+        <form onSubmit={e=>{e.preventDefault();handleSave();}} style={{ display:'flex', flexDirection:'column', gap:'14px', minWidth:'340px' }}>
+          <div><label>Tour Title *</label><input type="text" value={formData.title} onChange={e=>setFormData({...formData,title:e.target.value})} placeholder="e.g. Bali Adventure Trek" required autoFocus /></div>
+          <div><label>Description</label><textarea value={formData.description} onChange={e=>setFormData({...formData,description:e.target.value})} placeholder="Describe the tour experience..." style={{ minHeight:'90px', resize:'vertical' }} /></div>
           <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: 700, 
-              fontSize: '14px',
-              color: 'var(--text)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              📝 Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Enter tour description"
-              style={{ 
-                resize: 'vertical', 
-                minHeight: '120px',
-                width: '100%',
-                padding: '14px 18px',
-                fontSize: '14px',
-                fontWeight: 600
-              }}
-            />
+            <label>Price (USD) *</label>
+            <input type="number" step="1" min="0" value={formData.price} onChange={e=>setFormData({...formData,price:parseFloat(e.target.value)||0})} placeholder="0" required />
+            <div style={{ marginTop:'6px' }}><PriceTier price={formData.price} /></div>
           </div>
-          <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: 700, 
-              fontSize: '14px',
-              color: 'var(--text)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              💰 Price ($) *
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-              placeholder="Enter price"
-              required
-              style={{
-                width: '100%',
-                padding: '14px 18px',
-                fontSize: '14px',
-                fontWeight: 600
-              }}
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-            <button
-              type="submit"
-              className="btn"
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <span>💾</span> Save Tour
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowModal(false)}
-              style={{
-                flex: 1,
-                padding: '14px 20px',
-                background: 'linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)',
-                color: '#374151',
-                border: 'none',
-                borderRadius: '10px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontSize: '14px',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'none';
-              }}
-            >
-              Cancel
-            </button>
+          <div style={{ display:'flex', gap:'8px', marginTop:'4px' }}>
+            <button type="submit" style={{ flex:1 }} disabled={saving}>{saving?'Saving…':editingItem?'Update Tour':'Create Tour'}</button>
+            <button type="button" onClick={()=>setShowModal(false)} style={{ flex:1, background:'#f0f7ff', color:'#5f6b7a', border:'1px solid #c5d8f5', boxShadow:'none' }}>Cancel</button>
           </div>
         </form>
       </Modal>

@@ -2,36 +2,27 @@ import React from 'react';
 
 export default function EmptyState({ icon, title, description, action }) {
   return (
-    <div className="card" style={{
+    <div style={{
       textAlign: 'center',
-      padding: '60px 40px',
-      color: '#6b7280',
-      background: 'linear-gradient(135deg, #fff 0%, #f9fafb 100%)',
-      borderStyle: 'dashed',
-      animation: 'slideInUp 0.4s ease'
+      padding: '64px 40px',
+      border: '1px dashed rgba(61,90,128,0.4)',
+      borderRadius: '12px',
+      background: 'rgba(13,27,42,0.3)',
+      animation: 'fadeIn 0.3s ease',
     }}>
-      <div style={{
-        fontSize: '64px',
-        marginBottom: '20px',
-        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-      }}>
-        {icon}
-      </div>
-      <h3 style={{
-        margin: '0 0 12px 0',
-        color: '#1f2937',
-        fontSize: '20px',
-        fontWeight: '600'
-      }}>
+      {icon && (
+        <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.35, filter: 'grayscale(1)' }}>
+          {icon}
+        </div>
+      )}
+      <h3 style={{ margin: '0 0 8px 0', color: '#5a7080', fontSize: '16px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
         {title}
       </h3>
-      <p style={{
-        margin: '0 0 24px 0',
-        fontSize: '14px',
-        lineHeight: '1.6'
-      }}>
-        {description}
-      </p>
+      {description && (
+        <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: '#3d5a70', lineHeight: '1.6' }}>
+          {description}
+        </p>
+      )}
       {action}
     </div>
   );

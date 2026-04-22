@@ -1,127 +1,83 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
-export default function Modal({ isOpen, title, children, onClose }) {
-  const [isClosing, setIsClosing] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+export default function Modal({ isOpen, title, children, onClose, maxWidth = 520 }) {
+  const overlayRef = useRef(null);
 
   useEffect(() => {
-    const checkTheme = () => {
-      setIsDark(document.documentElement.classList.contains('theme-dark'));
+    if (!isOpen) return;
+    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = '';
     };
-    checkTheme();
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 200);
-  };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: isClosing ? 'rgba(0, 0, 0, 0)' : (isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(0, 0, 0, 0.7)'),
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      animation: isClosing ? 'fadeOut 0.2s ease forwards' : 'fadeIn 0.2s ease forwards',
-      transition: 'background-color 0.2s ease'
-    }}>
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes fadeOut {
-          from { opacity: 1; }
-          to { opacity: 0; }
-        }
-        @keyframes modalSlideIn {
-          from {
-            opacity: 0;
-            transform: scale(0.95) translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-        }
-        @keyframes modalSlideOut {
-          from {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-          to {
-            opacity: 0;
-            transform: scale(0.95) translateY(20px);
-          }
-        }
-      `}</style>
+    <div
+      ref={overlayRef}
+      onClick={e => { if (e.target === overlayRef.current) onClose(); }}
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(4,9,18,0.88)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000,
+        animation: 'fadeIn 0.18s ease',
+        backdropFilter: 'blur(6px)',
+        padding: '20px',
+      }}
+    >
       <div style={{
-        backgroundColor: isDark ? '#1e293b' : '#fff',
-        borderRadius: '16px',
-        boxShadow: isDark ? '0 25px 50px rgba(0, 0, 0, 0.6)' : '0 25px 50px rgba(0, 0, 0, 0.15)',
-        border: isDark ? '1px solid rgba(255,255,255,0.15)' : 'none',
-        maxWidth: '500px',
-        width: '90%',
-        maxHeight: '80vh',
+        background: 'linear-gradient(160deg, #1a2d42 0%, #131f2e 100%)',
+        borderRadius: '14px',
+        width: '100%',
+        maxWidth,
+        maxHeight: '90vh',
         overflow: 'auto',
-        animation: isClosing ? 'modalSlideOut 0.2s ease forwards' : 'modalSlideIn 0.3s ease'
+        boxShadow: '0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(201,168,76,0.18)',
+        animation: 'scaleIn 0.22s cubic-bezier(0.34,1.56,0.64,1)',
+        border: '1px solid rgba(201,168,76,0.12)',
+        position: 'relative',
       }}>
+        {/* Gold top line */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent 0%, #c9a84c 40%, #e2c06e 60%, transparent 100%)', borderRadius: '14px 14px 0 0' }} />
+
+        {/* Header */}
         <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '20px 24px',
-          borderBottom: isDark ? '1px solid rgba(255,255,255,0.15)' : '1px solid #e5e7eb',
-          position: 'sticky',
-          top: 0,
-          backgroundColor: isDark ? '#1e293b' : '#fff',
-          background: isDark ? 'linear-gradient(135deg, #1e293b 0%, #334155 100%)' : 'linear-gradient(135deg, #fff 0%, #f9fafb 100%)',
-          borderTopLeftRadius: '16px',
-          borderTopRightRadius: '16px'
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '20px 24px 18px',
+          borderBottom: '1px solid rgba(46,64,87,0.5)',
+          background: 'rgba(8,15,24,0.4)',
+          borderRadius: '14px 14px 0 0',
         }}>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: isDark ? '#f1f5f9' : '#1f2937' }}>
+          <h3 style={{
+            margin: 0, fontSize: '13px', fontWeight: 800,
+            color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '2px',
+            fontFamily: "'Barlow', sans-serif",
+          }}>
             {title}
           </h3>
           <button
-            onClick={handleClose}
+            onClick={onClose}
             style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '24px',
-              cursor: 'pointer',
-              color: isDark ? '#cbd5e1' : '#6b7280',
-              padding: '0 8px',
-              transition: 'all 0.2s ease',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px'
+              background: 'transparent', border: '1px solid rgba(46,64,87,0.6)',
+              color: '#3d5a70', width: '30px', height: '30px', borderRadius: '6px',
+              cursor: 'pointer', fontSize: '14px', display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.15s ease', padding: 0,
+              textTransform: 'none', letterSpacing: 0, boxShadow: 'none',
             }}
-            onMouseEnter={(e) => {
-              e.target.style.background = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
-              e.target.style.color = isDark ? '#f1f5f9' : '#1f2937';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = 'none';
-              e.target.style.color = isDark ? '#cbd5e1' : '#6b7280';
-            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(192,57,43,0.15)'; e.currentTarget.style.borderColor = '#c0392b'; e.currentTarget.style.color = '#e87070'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(46,64,87,0.6)'; e.currentTarget.style.color = '#3d5a70'; }}
           >
             ✕
           </button>
         </div>
+
+        {/* Body */}
         <div style={{ padding: '24px' }}>
           {children}
         </div>

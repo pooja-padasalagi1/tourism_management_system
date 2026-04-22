@@ -68,12 +68,14 @@ async function setupDatabase() {
     const [userCount] = await connection.query('SELECT COUNT(*) as count FROM users');
     const [hotelCount] = await connection.query('SELECT COUNT(*) as count FROM hotels');
     const [tourCount] = await connection.query('SELECT COUNT(*) as count FROM tours');
+    const [tourPackageCount] = await connection.query('SELECT COUNT(*) as count FROM tour_packages');
     const [bookingCount] = await connection.query('SELECT COUNT(*) as count FROM bookings');
 
     console.log('📊 Database Statistics:');
     console.log(`   👥 Users: ${userCount[0].count}`);
     console.log(`   🏨 Hotels: ${hotelCount[0].count}`);
     console.log(`   ✈️  Tours: ${tourCount[0].count}`);
+    console.log(`   📦 Tour Packages: ${tourPackageCount[0].count}`);
     console.log(`   📅 Bookings: ${bookingCount[0].count}\n`);
 
     console.log('✨ Database setup completed successfully!\n');
