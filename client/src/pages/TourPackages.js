@@ -241,7 +241,8 @@ export default function TourPackages() {
           )}
           {isAdmin && (
             <button onClick={openCreate}
-              style={{ padding:'9px 18px', borderRadius:'7px', background:'#d4edda', color:'#1e8e3e', border:'1px solid #b1d5b1', fontWeight:700, fontSize:'12px', cursor:'pointer', letterSpacing:'.5px', textTransform:'uppercase', boxShadow:'none' }}>
+              className="btn btn-success-vibrant"
+              style={{ padding:'9px 18px', borderRadius:'7px', fontWeight:700, fontSize:'12px', cursor:'pointer', letterSpacing:'.5px', textTransform:'uppercase', boxShadow:'none' }}>
               + Add Package
             </button>
           )}
@@ -449,7 +450,7 @@ export default function TourPackages() {
               <div style={{ display:'flex', gap:'8px' }}>
                 <button onClick={() => setViewPkg(null)} style={{ padding:'9px 18px', borderRadius:'7px', background:'#f0f7ff', color:'#5f6b7a', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'12px', cursor:'pointer', boxShadow:'none', textTransform:'uppercase' }}>Close</button>
                 {isAdmin && (
-                  <button onClick={() => { setViewPkg(null); openEdit(viewPkg); }} style={{ padding:'9px 18px', borderRadius:'7px', background:'#1a73e8', color:'#fff', border:'none', fontWeight:700, fontSize:'12px', cursor:'pointer', textTransform:'uppercase' }}>Edit</button>
+                  <button onClick={() => { setViewPkg(null); openEdit(viewPkg); }} className="btn btn-info-vibrant" style={{ padding:'9px 18px', borderRadius:'7px', fontWeight:700, fontSize:'12px', cursor:'pointer', textTransform:'uppercase' }}>Edit</button>
                 )}
               </div>
             </div>

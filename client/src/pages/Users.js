@@ -133,7 +133,7 @@ export default function Users() {
           <button onClick={()=>setViewMode(v=>v==='grid'?'table':'grid')} style={{ padding:'9px 14px', borderRadius:'7px', background:'#f0f7ff', color:'#5f6b7a', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'12px', cursor:'pointer', boxShadow:'none', textTransform:'uppercase' }}>
             {viewMode==='grid'?'Table View':'Grid View'}
           </button>
-          <button className="btn" onClick={openCreate} style={{ padding:'9px 18px', fontSize:'12px' }}>+ Add User</button>
+          <button className="btn btn-vibrant" onClick={openCreate} style={{ padding:'9px 18px', fontSize:'12px' }}>+ Add User</button>
         </div>
       </div>
 
@@ -176,7 +176,7 @@ export default function Users() {
       {loading ? (
         <div style={{ display:'flex', justifyContent:'center', padding:'60px 0' }}><Spinner /></div>
       ) : filtered.length===0 ? (
-        <EmptyState icon="👥" title={search||roleFilter!=='all'?'No users match':'No users yet'} description={search||roleFilter!=='all'?'Try different filters.':'Add your first user.'} action={!search&&roleFilter==='all'&&<button className="btn" onClick={openCreate}>Add User</button>} />
+        <EmptyState icon="👥" title={search||roleFilter!=='all'?'No users match':'No users yet'} description={search||roleFilter!=='all'?'Try different filters.':'Add your first user.'} action={!search&&roleFilter==='all'&&<button className="btn btn-vibrant" onClick={openCreate}>Add User</button>} />
       ) : viewMode==='table' ? (
         /* Table View */
         <div className="card" style={{ padding:0, overflow:'hidden' }}>

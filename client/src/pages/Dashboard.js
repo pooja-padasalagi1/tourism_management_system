@@ -14,34 +14,30 @@ function StatCard({ type, label, value, delay = 0 }) {
   const cfg = STAT_ICONS[type];
   return (
     <div
-      className="card"
+      className="card-professional hover-lift"
       style={{
-        padding: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '18px',
         animation: `slideInUp 0.4s ease ${delay}s backwards`,
-        borderLeft: `3px solid ${cfg.color}`,
-        cursor: 'default',
+        borderLeft: `4px solid ${cfg.color}`,
+        cursor: 'pointer',
       }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderLeftColor = '#c9a84c'; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderLeftColor = cfg.color; }}
     >
-      <div style={{
-        width: '52px', height: '52px',
-        borderRadius: '10px',
-        background: `${cfg.color}18`,
-        border: `1px solid ${cfg.color}30`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-      }}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d={cfg.d} />
-        </svg>
+      <div className="card-header-professional">
+        <div style={{
+          width: '56px', height: '56px',
+          borderRadius: '12px',
+          background: `linear-gradient(135deg, ${cfg.color}20, ${cfg.color}10)`,
+          border: `2px solid ${cfg.color}30`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d={cfg.d} />
+          </svg>
+        </div>
       </div>
-      <div>
-        <div style={{ fontSize: '28px', fontWeight: 900, color: '#e8edf2', fontFamily: "'Barlow', sans-serif", lineHeight: 1 }}>{value}</div>
-        <div style={{ fontSize: '11px', color: '#5a7080', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: '4px' }}>{label}</div>
+      <div className="card-body-professional">
+        <div style={{ fontSize: '32px', fontWeight: 900, color: '#2d3748', fontFamily: "'Barlow', sans-serif", lineHeight: 1, marginBottom: '8px' }} className="text-gradient">{value}</div>
+        <div style={{ fontSize: '12px', color: '#718096', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</div>
       </div>
     </div>
   );
@@ -98,21 +94,25 @@ export default function Dashboard() {
   return (
     <div className="page">
       {/* Page Header */}
-      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Dashboard</h2>
-          <p style={{ margin: '6px 0 0 0', color: '#3d5a70', fontSize: '13px', letterSpacing: '0.5px' }}>
-            Overview of your tourism platform
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button className="btn" onClick={() => nav('/bookings')} style={{ padding: '10px 18px', fontSize: '11px' }}>New Booking</button>
-          <button className="btn" onClick={() => nav('/tours')} style={{ padding: '10px 18px', fontSize: '11px' }}>Add Tour</button>
+      <div className="spacing-section">
+        <div className="spacing-container">
+          <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h2 className="text-gradient font-display" style={{ margin: 0, fontSize: '36px' }}>Dashboard</h2>
+              <p style={{ margin: '8px 0 0 0', color: '#718096', fontSize: '16px', letterSpacing: '0.5px', fontWeight: 500 }}>
+                Overview of your tourism platform
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button className="btn btn-primary btn-ripple" onClick={() => nav('/bookings')} style={{ padding: '12px 20px', fontSize: '13px' }}>New Booking</button>
+              <button className="btn btn-success btn-ripple" onClick={() => nav('/tours')} style={{ padding: '12px 20px', fontSize: '13px' }}>Add Tour</button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '36px' }}>
+      <div className="spacing-grid">
         <StatCard type="users"    label="Total Users"    value={counts.users}    delay={0.05} />
         <StatCard type="hotels"   label="Total Hotels"   value={counts.hotels}   delay={0.1} />
         <StatCard type="tours"    label="Total Tours"    value={counts.tours}    delay={0.15} />
@@ -120,112 +120,104 @@ export default function Dashboard() {
       </div>
 
       {/* Two-column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px', marginBottom: '28px' }}>
+      <div className="spacing-grid" style={{ marginBottom: '32px' }}>
         {/* Top Hotels */}
-        <div className="card" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
-              Top Rated Hotels
-            </h3>
-            <button onClick={() => nav('/hotels')} style={{ padding: '6px 12px', fontSize: '10px', background: 'transparent', border: '1px solid rgba(201,168,76,0.3)', color: '#c9a84c', boxShadow: 'none' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+        <div className="card-professional">
+          <div className="card-header-professional">
+            <h3 className="card-title-professional">Top Rated Hotels</h3>
+            <button onClick={() => nav('/hotels')} className="btn btn-outline btn-ripple" style={{ padding: '6px 12px', fontSize: '10px' }}>
               View All
             </button>
           </div>
-          {topHotels.length === 0 ? (
-            <p style={{ color: '#3d5a70', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>No hotels yet</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {topHotels.map((hotel, idx) => (
-                <div key={hotel.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: idx < topHotels.length - 1 ? '1px solid rgba(61,90,128,0.2)' : 'none' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 900, color: '#c9a84c', flexShrink: 0 }}>
-                    {idx + 1}
+          <div className="card-body-professional">
+            {topHotels.length === 0 ? (
+              <p style={{ color: '#718096', fontSize: '14px', textAlign: 'center', padding: '20px 0' }}>No hotels yet</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {topHotels.map((hotel, idx) => (
+                  <div key={hotel.id} className="interactive-element" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: idx < topHotels.length - 1 ? '1px solid rgba(0,0,0,0.1)' : 'none' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: 'white', flexShrink: 0 }}>
+                      {idx + 1}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hotel.name}</div>
+                      <div style={{ fontSize: '13px', color: '#718096', marginTop: '2px' }}>{hotel.location}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                      <span style={{ color: '#f6ad55', fontSize: '14px' }}>⭐</span>
+                      <span style={{ fontWeight: 700, fontSize: '14px', color: '#2d3748' }}>{Number(hotel.rating || 0).toFixed(1)}</span>
+                    </div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '14px', color: '#c5d0db', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hotel.name}</div>
-                    <div style={{ fontSize: '12px', color: '#3d5a70', marginTop: '2px' }}>{hotel.location}</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                    <span style={{ color: '#c9a84c', fontSize: '12px' }}>★</span>
-                    <span style={{ fontWeight: 700, fontSize: '13px', color: '#c9a84c' }}>{Number(hotel.rating || 0).toFixed(1)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Premium Tours */}
-        <div className="card" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
-              Premium Tours
-            </h3>
-            <button onClick={() => nav('/tours')} style={{ padding: '6px 12px', fontSize: '10px', background: 'transparent', border: '1px solid rgba(201,168,76,0.3)', color: '#c9a84c', boxShadow: 'none' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+        <div className="card-professional">
+          <div className="card-header-professional">
+            <h3 className="card-title-professional">Premium Tours</h3>
+            <button onClick={() => nav('/tours')} className="btn btn-outline btn-ripple" style={{ padding: '6px 12px', fontSize: '10px' }}>
               View All
             </button>
           </div>
-          {popularTours.length === 0 ? (
-            <p style={{ color: '#3d5a70', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>No tours yet</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {popularTours.map((tour, idx) => (
-                <div key={tour.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: idx < popularTours.length - 1 ? '1px solid rgba(61,90,128,0.2)' : 'none' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(61,90,128,0.2)', border: '1px solid rgba(61,90,128,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 900, color: '#7a9fc0', flexShrink: 0 }}>
-                    {idx + 1}
+          <div className="card-body-professional">
+            {popularTours.length === 0 ? (
+              <p style={{ color: '#718096', fontSize: '14px', textAlign: 'center', padding: '20px 0' }}>No tours yet</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {popularTours.map((tour, idx) => (
+                  <div key={tour.id} className="interactive-element" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: idx < popularTours.length - 1 ? '1px solid rgba(0,0,0,0.1)' : 'none' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #48bb78, #38a169)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: 'white', flexShrink: 0 }}>
+                      {idx + 1}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tour.title}</div>
+                      {tour.description && <div style={{ fontSize: '13px', color: '#718096', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tour.description}</div>}
+                    </div>
+                    <div style={{ fontWeight: 800, fontSize: '15px', color: '#48bb78', flexShrink: 0 }}>
+                      ${Number(tour.price || 0).toFixed(0)}
+                    </div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '14px', color: '#c5d0db', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tour.title}</div>
-                    {tour.description && <div style={{ fontSize: '12px', color: '#3d5a70', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tour.description}</div>}
-                  </div>
-                  <div style={{ fontWeight: 800, fontSize: '14px', color: '#c9a84c', flexShrink: 0 }}>
-                    ${Number(tour.price || 0).toFixed(0)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Recent Bookings */}
-      <div className="card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
-            Recent Bookings
-          </h3>
-          <button onClick={() => nav('/bookings')} style={{ padding: '6px 12px', fontSize: '10px', background: 'transparent', border: '1px solid rgba(201,168,76,0.3)', color: '#c9a84c', boxShadow: 'none' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.08)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+      <div className="card-professional">
+        <div className="card-header-professional">
+          <h3 className="card-title-professional">Recent Bookings</h3>
+          <button onClick={() => nav('/bookings')} className="btn btn-outline btn-ripple" style={{ padding: '6px 12px', fontSize: '10px' }}>
             View All
           </button>
         </div>
-        {recentBookings.length === 0 ? (
-          <p style={{ color: '#3d5a70', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>No bookings yet</p>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-            {recentBookings.map(b => {
-              const sc = STATUS_COLORS[b.status] || STATUS_COLORS.pending;
-              return (
-                <div key={b.id} style={{ padding: '14px 16px', borderRadius: '8px', background: 'rgba(13,27,42,0.5)', border: '1px solid rgba(61,90,128,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'border-color 0.2s ease' }}
-                  onClick={() => nav('/bookings')}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.3)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(61,90,128,0.3)'; }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '14px', color: '#c5d0db' }}>#{b.id} — {b.user_name || `User ${b.user_id}`}</div>
-                    <div style={{ fontSize: '12px', color: '#3d5a70', marginTop: '3px' }}>{b.tour_title || 'Tour'}</div>
+        <div className="card-body-professional">
+          {recentBookings.length === 0 ? (
+            <p style={{ color: '#718096', fontSize: '14px', textAlign: 'center', padding: '20px 0' }}>No bookings yet</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+              {recentBookings.map(b => {
+                const sc = STATUS_COLORS[b.status] || STATUS_COLORS.pending;
+                return (
+                  <div key={b.id} className="interactive-element" style={{ padding: '16px', borderRadius: '12px', background: 'rgba(102, 126, 234, 0.05)', border: '1px solid rgba(102, 126, 234, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                    onClick={() => nav('/bookings')}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748' }}>#{b.id} — {b.user_name || `User ${b.user_id}`}</div>
+                      <div style={{ fontSize: '13px', color: '#718096', marginTop: '4px' }}>{b.tour_title || 'Tour'}</div>
+                    </div>
+                    <span style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
+                      {b.status}
+                    </span>
                   </div>
-                  <span style={{ padding: '4px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
-                    {b.status}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

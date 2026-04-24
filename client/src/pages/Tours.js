@@ -104,7 +104,7 @@ export default function Tours() {
               Delete {selected.size} Selected
             </button>
           )}
-          {isAdmin && <button className="btn" onClick={openCreate} style={{ padding:'9px 18px', fontSize:'12px' }}>+ Add Tour</button>}
+          {isAdmin && <button className="btn btn-vibrant" onClick={openCreate} style={{ padding:'9px 18px', fontSize:'12px' }}>+ Add Tour</button>}
         </div>
       </div>
 
@@ -146,7 +146,7 @@ export default function Tours() {
       {loading ? (
         <div style={{ display:'flex', justifyContent:'center', padding:'60px 0' }}><Spinner /></div>
       ) : filtered.length===0 ? (
-        <EmptyState icon="✈️" title={search||priceFilter!=='all'?'No tours match':'No tours yet'} description={search||priceFilter!=='all'?'Try different filters.':'Create your first tour.'} action={isAdmin&&!search&&priceFilter==='all'&&<button className="btn" onClick={openCreate}>Add Tour</button>} />
+        <EmptyState icon="✈️" title={search||priceFilter!=='all'?'No tours match':'No tours yet'} description={search||priceFilter!=='all'?'Try different filters.':'Create your first tour.'} action={isAdmin&&!search&&priceFilter==='all'&&<button className="btn btn-vibrant" onClick={openCreate}>Add Tour</button>} />
       ) : (
         <>
           {isAdmin && (
@@ -199,7 +199,7 @@ export default function Tours() {
             )}
             <div style={{ display:'flex', gap:'8px', justifyContent:'flex-end', marginTop:'8px' }}>
               <button onClick={()=>setViewTour(null)} style={{ padding:'9px 18px', borderRadius:'7px', background:'#f0f7ff', color:'#5f6b7a', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'12px', cursor:'pointer', boxShadow:'none', textTransform:'uppercase' }}>Close</button>
-              {isAdmin && <button className="btn" onClick={()=>{setViewTour(null);openEdit(viewTour);}}>Edit</button>}
+              {isAdmin && <button className="btn btn-info-vibrant" onClick={()=>{setViewTour(null);openEdit(viewTour);}}>Edit</button>}
             </div>
           </div>
         )}

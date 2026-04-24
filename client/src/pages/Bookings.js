@@ -139,7 +139,7 @@ export default function Bookings() {
               Delete {selected.size}
             </button>
           )}
-          {isAdmin && <button className="btn" onClick={openCreate} style={{ padding:'9px 18px', fontSize:'12px' }}>+ Create Booking</button>}
+          {isAdmin && <button className="btn btn-vibrant" onClick={openCreate} style={{ padding:'9px 18px', fontSize:'12px' }}>+ Create Booking</button>}
         </div>
       </div>
 
@@ -258,7 +258,7 @@ export default function Bookings() {
             )}
             <div style={{ display:'flex', gap:'8px', justifyContent:'flex-end', marginTop:'8px' }}>
               <button onClick={()=>setViewBooking(null)} style={{ padding:'9px 18px', borderRadius:'7px', background:'#f0f7ff', color:'#5f6b7a', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'12px', cursor:'pointer', boxShadow:'none', textTransform:'uppercase' }}>Close</button>
-              {isAdmin && <button className="btn" onClick={()=>{setViewBooking(null);openEdit(viewBooking);}}>Edit</button>}
+              {isAdmin && <button className="btn btn-info-vibrant" onClick={()=>{setViewBooking(null);openEdit(viewBooking);}}>Edit</button>}
             </div>
           </div>
         )}

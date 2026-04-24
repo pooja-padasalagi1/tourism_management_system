@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 
 const CONFIGS = {
-  success: { color: '#27ae60', bg: 'rgba(39,174,96,0.12)', border: 'rgba(39,174,96,0.3)', icon: '✓' },
-  error:   { color: '#c0392b', bg: 'rgba(192,57,43,0.12)', border: 'rgba(192,57,43,0.3)', icon: '✕' },
-  info:    { color: '#3d8bcd', bg: 'rgba(61,139,205,0.12)', border: 'rgba(61,139,205,0.3)', icon: 'i' },
-  warning: { color: '#e67e22', bg: 'rgba(230,126,34,0.12)', border: 'rgba(230,126,34,0.3)', icon: '!' },
+  success: { color: '#48bb78', bg: 'linear-gradient(135deg, #48bb78, #38a169)', border: 'rgba(72, 187, 120, 0.3)', icon: '✓', textColor: '#f0fff4' },
+  error:   { color: '#f56565', bg: 'linear-gradient(135deg, #f56565, #e53e3e)', border: 'rgba(245, 101, 101, 0.3)', icon: '✕', textColor: '#fed7d7' },
+  info:    { color: '#4299e1', bg: 'linear-gradient(135deg, #4299e1, #3182ce)', border: 'rgba(66, 153, 225, 0.3)', icon: 'ℹ', textColor: '#ebf8ff' },
+  warning: { color: '#ed8936', bg: 'linear-gradient(135deg, #ed8936, #dd6b20)', border: 'rgba(237, 137, 54, 0.3)', icon: '⚠', textColor: '#fffaf0' },
 };
 
 export default function Toast({ message, type = 'success', onClose }) {
@@ -12,49 +12,85 @@ export default function Toast({ message, type = 'success', onClose }) {
   const cfg = CONFIGS[type] || CONFIGS.success;
 
   useEffect(() => {
-    const t1 = setTimeout(() => setLeaving(true), 2700);
-    const t2 = setTimeout(onClose, 3000);
+    const t1 = setTimeout(() => setLeaving(true), 3700);
+    const t2 = setTimeout(onClose, 4000);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [onClose]);
 
   return (
-    <div style={{
-      position: 'fixed', top: '80px', right: '20px',
-      background: '#0d1b2a',
-      border: `1px solid ${cfg.border}`,
-      borderLeft: `3px solid ${cfg.color}`,
-      color: cfg.color,
-      padding: '14px 18px',
-      borderRadius: '8px',
-      boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
-      display: 'flex', alignItems: 'center', gap: '12px',
-      fontSize: '13px', fontWeight: 700,
-      zIndex: 2000,
-      animation: leaving ? 'slideOutRight 0.3s ease forwards' : 'slideInRight 0.3s ease',
-      maxWidth: '360px', minWidth: '240px',
+    <div className="notification-professional" style={{
+      animation: leaving ? 'slideOutRight 0.4s ease forwards' : 'slideInRight 0.4s ease',
+      borderLeftColor: cfg.color,
     }}>
-      <span style={{
-        width: '22px', height: '22px', borderRadius: '50%',
-        background: `${cfg.color}20`, border: `1px solid ${cfg.color}40`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '11px', fontWeight: 900, flexShrink: 0,
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        width: '100%',
       }}>
-        {cfg.icon}
-      </span>
-      <span style={{ flex: 1, color: '#c5d0db' }}>{message}</span>
-      <button
-        onClick={onClose}
-        style={{
-          background: 'transparent', border: 'none', color: '#3d5a70',
-          cursor: 'pointer', fontSize: '14px', padding: '0 2px',
-          transition: 'color 0.15s', boxShadow: 'none',
-          textTransform: 'none', letterSpacing: 0,
-        }}
-        onMouseEnter={e => e.currentTarget.style.color = '#c5d0db'}
-        onMouseLeave={e => e.currentTarget.style.color = '#3d5a70'}
-      >
-        ✕
-      </button>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: cfg.bg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '18px',
+          fontWeight: 700,
+          color: 'white',
+          flexShrink: 0,
+          boxShadow: `0 4px 12px ${cfg.color}40`,
+        }}>
+          {cfg.icon}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            color: '#2d3748',
+            marginBottom: '4px',
+            textTransform: 'capitalize',
+          }}>
+            {type}
+          </div>
+          <div style={{
+            fontSize: '14px',
+            color: '#718096',
+            lineHeight: '1.4',
+          }}>
+            {message}
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#a0aec0',
+            cursor: 'pointer',
+            fontSize: '20px',
+            padding: '4px',
+            borderRadius: '6px',
+            transition: 'all 0.2s ease',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = '#fee2e2';
+            e.currentTarget.style.color = '#e53e3e';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = '#a0aec0';
+          }}
+        >
+          ×
+        </button>
+      </div>
     </div>
   );
 }

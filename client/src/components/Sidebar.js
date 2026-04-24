@@ -81,183 +81,171 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Toggle */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="mobile-menu-toggle"
-        style={{
-          position: 'fixed', top: '18px', left: '16px', zIndex: 1001,
-          background: 'linear-gradient(135deg, #1a73e8 0%, #2196F3 100%)',
-          color: '#fff', border: '1px solid rgba(255,255,255,0.3)',
-          width: '38px', height: '38px', borderRadius: '6px',
-          cursor: 'pointer', fontSize: '18px', display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(26,115,232,0.4)'
-        }}
-      >
-        ☰
-      </button>
+      {/* Mobile overlay */}
+      {isOpen && window.innerWidth < 768 && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
 
       {/* Sidebar */}
-      <aside style={{
-        width: sidebarW,
-        height: 'calc(100vh - 68px)',
-        background: 'linear-gradient(180deg, #1565c0 0%, #1a73e8 40%, #1976d2 100%)',
-        color: '#fff',
-        padding: isOpen ? (collapsed ? '16px 8px' : '16px 0') : '0',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        transition: 'width 0.25s ease, padding 0.25s ease',
-        position: 'fixed',
-        left: 0,
-        top: '68px',
-        zIndex: 100,
-        borderRight: '1px solid rgba(255,255,255,0.12)',
-        boxShadow: '4px 0 24px rgba(26,115,232,0.3)',
-      }}>
-        {/* Header row */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'space-between',
-          padding: collapsed ? '0 0 16px 0' : '0 12px 16px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-          marginBottom: '8px',
-          gap: 8,
-        }}>
-          {!collapsed && (
-            <span style={{
-              fontFamily: "'Barlow', sans-serif",
-              fontWeight: 900,
-              fontSize: '13px',
-              letterSpacing: '2px',
-              textTransform: 'uppercase',
-              color: '#fff',
-              whiteSpace: 'nowrap',
+      <div className={`sidebar-professional ${isOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+          }}>
+            <h2 style={{
+              margin: 0,
+              fontSize: '20px',
+              fontWeight: 700,
+              color: '#2d3748',
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
             }}>
-              Navigation
-            </span>
-          )}
-          <button
-            onClick={toggleCollapse}
-            title={collapsed ? 'Expand' : 'Collapse'}
-            style={{
-              background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.3)',
-              color: 'rgba(255,255,255,0.7)',
-              width: '28px', height: '28px',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.2s ease',
-              flexShrink: 0,
-              padding: 0,
-              textTransform: 'none',
-              letterSpacing: 0,
-              boxShadow: 'none',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)'; e.currentTarget.style.color = '#fff'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
-          >
-            {collapsed ? '›' : '‹'}
-          </button>
+              TMS Pro
+            </h2>
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#718096',
+                cursor: 'pointer',
+                fontSize: '16px',
+                padding: '4px',
+                borderRadius: '6px',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = '#2d3748'}
+              onMouseLeave={e => e.currentTarget.style.color = '#718096'}
+            >
+              {collapsed ? '→' : '←'}
+            </button>
+          </div>
         </div>
 
-        {/* Menu Items */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: collapsed ? '0 4px' : '0 8px' }}>
+        <nav className="sidebar-menu">
           {menuItems.filter(item => item.show).map((item) => {
-            const active = isActive(item.path);
+            const isActive = isActive(item.path);
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                title={collapsed ? item.label : undefined}
-                onClick={() => { if (window.innerWidth < 768) setIsOpen(false); }}
+                className={`sidebar-menu-item ${isActive ? 'active' : ''}`}
+                onClick={() => window.innerWidth < 768 && setIsOpen(false)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: collapsed ? 0 : '10px',
-                  padding: collapsed ? '11px' : '10px 12px',
-                  color: active ? '#fff' : 'rgba(255,255,255,0.8)',
-                  textDecoration: 'none',
-                  borderRadius: '7px',
-                  transition: 'all 0.18s ease',
-                  background: active ? 'rgba(255,255,255,0.15)' : 'transparent',
-                  borderLeft: active && !collapsed ? '2px solid #fff' : '2px solid transparent',
-                  fontWeight: active ? 700 : 500,
-                  fontSize: '13px',
-                  letterSpacing: '0.3px',
+                  '--hover-color': item.color,
                   justifyContent: collapsed ? 'center' : 'flex-start',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                }}
-                onMouseEnter={e => {
-                  if (!active) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                    e.currentTarget.style.color = '#fff';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!active) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'rgba(255,255,255,0.8)';
-                  }
+                  padding: collapsed ? '16px' : '16px 24px',
                 }}
               >
-                <NavIcon path={item.path} size={16} />
-                {!collapsed && <span>{item.label}</span>}
-                {active && !collapsed && (
-                  <span style={{ marginLeft: 'auto', width: '6px', height: '6px', borderRadius: '50%', background: '#fff', flexShrink: 0 }} />
+                <span style={{
+                  fontSize: '18px',
+                  marginRight: collapsed ? '0' : '12px',
+                  color: isActive ? item.color : '#718096',
+                  transition: 'color 0.3s ease',
+                }}>
+                  {item.icon}
+                </span>
+                {!collapsed && (
+                  <span style={{
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? '#2d3748' : '#4a5568',
+                    transition: 'all 0.3s ease',
+                  }}>
+                    {item.label}
+                  </span>
                 )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Divider + Logout */}
-        {!collapsed && (
-          <div style={{ padding: '16px 8px 8px 8px', marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
-            <button
-              onClick={handleLogout}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.3)',
-                color: 'rgba(255,255,255,0.9)',
-                borderRadius: '7px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 700,
-                letterSpacing: '1px',
-                textTransform: 'uppercase',
+        {logged && (
+          <div style={{
+            padding: '20px',
+            borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+            marginTop: 'auto',
+          }}>
+            <div style={{
+              padding: '16px',
+              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))',
+              borderRadius: '12px',
+              border: '1px solid rgba(102, 126, 234, 0.2)',
+            }}>
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s ease',
-                boxShadow: 'none',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.borderColor = '#fff'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-              </svg>
-              Sign Out
-            </button>
+                gap: '12px',
+                marginBottom: '8px',
+              }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  color: 'white',
+                }}>
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                {!collapsed && (
+                  <div>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#2d3748',
+                      marginBottom: '2px',
+                    }}>
+                      {user?.name || 'User'}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#718096',
+                      textTransform: 'capitalize',
+                    }}>
+                      {user?.role || 'user'}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {!collapsed && (
+                <button
+                  onClick={handleLogout}
+                  className="btn btn-outline"
+                  style={{
+                    width: '100%',
+                    padding: '8px 16px',
+                    fontSize: '12px',
+                    borderColor: '#e53e3e',
+                    color: '#e53e3e',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#fed7d7';
+                    e.currentTarget.style.borderColor = '#e53e3e';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = '#e53e3e';
+                  }}
+                >
+                  Logout
+                </button>
+              )}
+            </div>
           </div>
         )}
-      </aside>
-
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 99 }}
-          onClick={() => setIsOpen(false)}
-          className="sidebar-overlay"
-        />
-      )}
+      </div>
     </>
   );
 }

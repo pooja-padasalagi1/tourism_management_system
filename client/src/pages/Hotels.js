@@ -130,7 +130,7 @@ export default function Hotels() {
               Delete {selected.size} Selected
             </button>
           )}
-          {isAdmin && <button className="btn" onClick={openCreate} style={{ padding:'9px 18px', fontSize:'12px' }}>+ Add Hotel</button>}
+          {isAdmin && <button className="btn btn-vibrant" onClick={openCreate} style={{ padding:'9px 18px', fontSize:'12px' }}>+ Add Hotel</button>}
         </div>
       </div>
 
@@ -174,7 +174,7 @@ export default function Hotels() {
       {loading ? (
         <div style={{ display:'flex', justifyContent:'center', padding:'60px 0' }}><Spinner /></div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon="🏨" title={search||minRating>0?'No hotels match':'No hotels yet'} description={search||minRating>0?'Try different filters.':'Add your first hotel.'} action={isAdmin&&!search&&<button className="btn" onClick={openCreate}>Add Hotel</button>} />
+        <EmptyState icon="🏨" title={search||minRating>0?'No hotels match':'No hotels yet'} description={search||minRating>0?'Try different filters.':'Add your first hotel.'} action={isAdmin&&!search&&<button className="btn btn-vibrant" onClick={openCreate}>Add Hotel</button>} />
       ) : (
         <>
           {isAdmin && (
@@ -224,7 +224,7 @@ export default function Hotels() {
             {FIELD('Location', viewHotel.location)}
             <div style={{ display:'flex', gap:'8px', justifyContent:'flex-end', marginTop:'8px' }}>
               <button onClick={()=>setViewHotel(null)} style={{ padding:'9px 18px', borderRadius:'7px', background:'#f0f7ff', color:'#5f6b7a', border:'1px solid #c5d8f5', fontWeight:700, fontSize:'12px', cursor:'pointer', boxShadow:'none', textTransform:'uppercase' }}>Close</button>
-              {isAdmin && <button className="btn" onClick={()=>{setViewHotel(null);openEdit(viewHotel);}}>Edit</button>}
+              {isAdmin && <button className="btn btn-info-vibrant" onClick={()=>{setViewHotel(null);openEdit(viewHotel);}}>Edit</button>}
             </div>
           </div>
         )}
