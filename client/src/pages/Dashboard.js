@@ -14,30 +14,23 @@ function StatCard({ type, label, value, delay = 0 }) {
   const cfg = STAT_ICONS[type];
   return (
     <div
-      className="card-professional hover-lift"
+      className="card stat-card"
       style={{
         animation: `slideInUp 0.4s ease ${delay}s backwards`,
         borderLeft: `4px solid ${cfg.color}`,
         cursor: 'pointer',
       }}
     >
-      <div className="card-header-professional">
-        <div style={{
-          width: '56px', height: '56px',
-          borderRadius: '12px',
-          background: `linear-gradient(135deg, ${cfg.color}20, ${cfg.color}10)`,
-          border: `2px solid ${cfg.color}30`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
+      <div className="card-header">
+        <div className="stat-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d={cfg.d} />
           </svg>
         </div>
       </div>
-      <div className="card-body-professional">
-        <div style={{ fontSize: '32px', fontWeight: 900, color: '#2d3748', fontFamily: "'Barlow', sans-serif", lineHeight: 1, marginBottom: '8px' }} className="text-gradient">{value}</div>
-        <div style={{ fontSize: '12px', color: '#718096', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</div>
+      <div className="card-body">
+        <div className="stat-value">{value}</div>
+        <div className="stat-label">{label}</div>
       </div>
     </div>
   );
@@ -94,25 +87,23 @@ export default function Dashboard() {
   return (
     <div className="page">
       {/* Page Header */}
-      <div className="spacing-section">
-        <div className="spacing-container">
-          <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <h2 className="text-gradient font-display" style={{ margin: 0, fontSize: '36px' }}>Dashboard</h2>
-              <p style={{ margin: '8px 0 0 0', color: '#718096', fontSize: '16px', letterSpacing: '0.5px', fontWeight: 500 }}>
-                Overview of your tourism platform
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <button className="btn btn-primary btn-ripple" onClick={() => nav('/bookings')} style={{ padding: '12px 20px', fontSize: '13px' }}>New Booking</button>
-              <button className="btn btn-success btn-ripple" onClick={() => nav('/tours')} style={{ padding: '12px 20px', fontSize: '13px' }}>Add Tour</button>
-            </div>
-          </div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">📊 Dashboard</h1>
+          <p className="page-subtitle">Welcome back! Here's your tourism platform overview</p>
+        </div>
+        <div className="flex-between gap-2">
+          <button className="btn btn-primary" onClick={() => nav('/bookings')}>
+            <span>📅</span> New Booking
+          </button>
+          <button className="btn btn-secondary" onClick={() => nav('/tours')}>
+            <span>✈️</span> Add Tour
+          </button>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="spacing-grid">
+      <div className="grid-4">
         <StatCard type="users"    label="Total Users"    value={counts.users}    delay={0.05} />
         <StatCard type="hotels"   label="Total Hotels"   value={counts.hotels}   delay={0.1} />
         <StatCard type="tours"    label="Total Tours"    value={counts.tours}    delay={0.15} />
@@ -120,32 +111,32 @@ export default function Dashboard() {
       </div>
 
       {/* Two-column layout */}
-      <div className="spacing-grid" style={{ marginBottom: '32px' }}>
+      <div className="grid-2">
         {/* Top Hotels */}
-        <div className="card-professional">
-          <div className="card-header-professional">
-            <h3 className="card-title-professional">Top Rated Hotels</h3>
-            <button onClick={() => nav('/hotels')} className="btn btn-outline btn-ripple" style={{ padding: '6px 12px', fontSize: '10px' }}>
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">🏨 Top Rated Hotels</h3>
+            <button onClick={() => nav('/hotels')} className="btn btn-outline btn-sm">
               View All
             </button>
           </div>
-          <div className="card-body-professional">
+          <div className="card-body">
             {topHotels.length === 0 ? (
-              <p style={{ color: '#718096', fontSize: '14px', textAlign: 'center', padding: '20px 0' }}>No hotels yet</p>
+              <div className="empty-state">
+                <div className="empty-state-icon">🏨</div>
+                <p className="empty-state-message">No hotels available yet</p>
+              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="gap-2" style={{ display: 'flex', flexDirection: 'column' }}>
                 {topHotels.map((hotel, idx) => (
-                  <div key={hotel.id} className="interactive-element" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: idx < topHotels.length - 1 ? '1px solid rgba(0,0,0,0.1)' : 'none' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #667eea, #764ba2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: 'white', flexShrink: 0 }}>
-                      {idx + 1}
+                  <div key={hotel.id} className="dashboard-list-item">
+                    <div className="dashboard-list-rank">{idx + 1}</div>
+                    <div className="dashboard-list-content">
+                      <div className="dashboard-list-title">{hotel.name}</div>
+                      <div className="dashboard-list-subtitle">{hotel.location}</div>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hotel.name}</div>
-                      <div style={{ fontSize: '13px', color: '#718096', marginTop: '2px' }}>{hotel.location}</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                      <span style={{ color: '#f6ad55', fontSize: '14px' }}>⭐</span>
-                      <span style={{ fontWeight: 700, fontSize: '14px', color: '#2d3748' }}>{Number(hotel.rating || 0).toFixed(1)}</span>
+                    <div className="dashboard-list-badge">
+                      <span>⭐ {Number(hotel.rating || 0).toFixed(1)}</span>
                     </div>
                   </div>
                 ))}
@@ -155,28 +146,29 @@ export default function Dashboard() {
         </div>
 
         {/* Premium Tours */}
-        <div className="card-professional">
-          <div className="card-header-professional">
-            <h3 className="card-title-professional">Premium Tours</h3>
-            <button onClick={() => nav('/tours')} className="btn btn-outline btn-ripple" style={{ padding: '6px 12px', fontSize: '10px' }}>
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">✈️ Premium Tours</h3>
+            <button onClick={() => nav('/tours')} className="btn btn-outline btn-sm">
               View All
             </button>
           </div>
-          <div className="card-body-professional">
+          <div className="card-body">
             {popularTours.length === 0 ? (
-              <p style={{ color: '#718096', fontSize: '14px', textAlign: 'center', padding: '20px 0' }}>No tours yet</p>
+              <div className="empty-state">
+                <div className="empty-state-icon">✈️</div>
+                <p className="empty-state-message">No tours available yet</p>
+              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="gap-2" style={{ display: 'flex', flexDirection: 'column' }}>
                 {popularTours.map((tour, idx) => (
-                  <div key={tour.id} className="interactive-element" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: idx < popularTours.length - 1 ? '1px solid rgba(0,0,0,0.1)' : 'none' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #48bb78, #38a169)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: 'white', flexShrink: 0 }}>
-                      {idx + 1}
+                  <div key={tour.id} className="dashboard-list-item">
+                    <div className="dashboard-list-rank dashboard-list-rank-success">{idx + 1}</div>
+                    <div className="dashboard-list-content">
+                      <div className="dashboard-list-title">{tour.title}</div>
+                      {tour.description && <div className="dashboard-list-subtitle">{tour.description}</div>}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tour.title}</div>
-                      {tour.description && <div style={{ fontSize: '13px', color: '#718096', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tour.description}</div>}
-                    </div>
-                    <div style={{ fontWeight: 800, fontSize: '15px', color: '#48bb78', flexShrink: 0 }}>
+                    <div className="dashboard-list-badge dashboard-list-price">
                       ${Number(tour.price || 0).toFixed(0)}
                     </div>
                   </div>
@@ -188,28 +180,30 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Bookings */}
-      <div className="card-professional">
-        <div className="card-header-professional">
-          <h3 className="card-title-professional">Recent Bookings</h3>
-          <button onClick={() => nav('/bookings')} className="btn btn-outline btn-ripple" style={{ padding: '6px 12px', fontSize: '10px' }}>
+      <div className="card">
+        <div className="card-header">
+          <h3 className="card-title">📅 Recent Bookings</h3>
+          <button onClick={() => nav('/bookings')} className="btn btn-outline btn-sm">
             View All
           </button>
         </div>
-        <div className="card-body-professional">
+        <div className="card-body">
           {recentBookings.length === 0 ? (
-            <p style={{ color: '#718096', fontSize: '14px', textAlign: 'center', padding: '20px 0' }}>No bookings yet</p>
+            <div className="empty-state">
+              <div className="empty-state-icon">📅</div>
+              <p className="empty-state-message">No bookings yet</p>
+            </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            <div className="grid-3">
               {recentBookings.map(b => {
                 const sc = STATUS_COLORS[b.status] || STATUS_COLORS.pending;
                 return (
-                  <div key={b.id} className="interactive-element" style={{ padding: '16px', borderRadius: '12px', background: 'rgba(102, 126, 234, 0.05)', border: '1px solid rgba(102, 126, 234, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                    onClick={() => nav('/bookings')}>
+                  <div key={b.id} className="booking-card" style={{ padding: '1rem', borderRadius: '10px', background: sc.bg, border: `2px solid ${sc.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748' }}>#{b.id} — {b.user_name || `User ${b.user_id}`}</div>
-                      <div style={{ fontSize: '13px', color: '#718096', marginTop: '4px' }}>{b.tour_title || 'Tour'}</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b' }}>#{b.id} — {b.user_name || `User ${b.user_id}`}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#718096', marginTop: '0.25rem' }}>{b.tour_title || 'Tour'}</div>
                     </div>
-                    <span style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
+                    <span style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', color: sc.text }}>
                       {b.status}
                     </span>
                   </div>
