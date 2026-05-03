@@ -1,8 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 
 export default function Modal({ isOpen, title, children, onClose, maxWidth = 520 }) {
-  const overlayRef = useRef(null);
-
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -18,26 +16,19 @@ export default function Modal({ isOpen, title, children, onClose, maxWidth = 520
 
   return (
     <div
-      ref={overlayRef}
-      onClick={e => { if (e.target === overlayRef.current) onClose(); }}
-      className="modal-overlay-professional"
+      className="modal-overlay"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="modal-content-professional" style={{ maxWidth }}>
-        <button
-          onClick={onClose}
-          className="modal-close-professional"
-          aria-label="Close modal"
-        >
-          ×
-        </button>
-
-        {title && (
-          <div className="modal-header-professional">
-            <h2 className="font-display">{title}</h2>
-          </div>
-        )}
-
-        <div className="modal-body-professional">
+      <div
+        className="modal"
+        style={{ maxWidth }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <h3 className="modal-title">{title}</h3>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="modal-body">
           {children}
         </div>
       </div>

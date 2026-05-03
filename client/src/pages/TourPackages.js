@@ -97,27 +97,27 @@ export default function TourPackages() {
 
   const filtered = items
     .filter(p => 
-      p.name.toLowerCase().includes(search.toLowerCase()) || 
-      (p.description||'').toLowerCase().includes(search.toLowerCase()) ||
-      (p.destination||'').toLowerCase().includes(search.toLowerCase())
+      String(p.name || '').toLowerCase().includes(search.toLowerCase()) || 
+      String(p.description || '').toLowerCase().includes(search.toLowerCase()) ||
+      String(p.destination || '').toLowerCase().includes(search.toLowerCase())
     )
     .filter(p => {
-      if (difficultyFilter !== 'all') return p.difficulty_level === difficultyFilter;
+      if (difficultyFilter !== 'all') return String(p.difficulty_level || 'moderate') === difficultyFilter;
       return true;
     })
     .filter(p => {
-      const pr = Number(p.price||0);
+      const pr = Number(p.price || 0);
       if (priceFilter === 'budget') return pr < 1000;
       if (priceFilter === 'mid') return pr >= 1000 && pr < 3000;
       if (priceFilter === 'premium') return pr >= 3000;
       return true;
     })
     .sort((a, b) => {
-      if (sortBy === 'price') return Number(a.price||0) - Number(b.price||0);
-      if (sortBy === 'price-desc') return Number(b.price||0) - Number(a.price||0);
-      if (sortBy === 'rating') return (b.rating||0) - (a.rating||0);
-      if (sortBy === 'duration') return Number(a.duration_days||0) - Number(b.duration_days||0);
-      return a.name.localeCompare(b.name);
+      if (sortBy === 'price') return Number(a.price || 0) - Number(b.price || 0);
+      if (sortBy === 'price-desc') return Number(b.price || 0) - Number(a.price || 0);
+      if (sortBy === 'rating') return Number(b.rating || 0) - Number(a.rating || 0);
+      if (sortBy === 'duration') return Number(a.duration_days || 0) - Number(b.duration_days || 0);
+      return String(a.name || '').localeCompare(String(b.name || ''));
     });
 
   function openCreate() {

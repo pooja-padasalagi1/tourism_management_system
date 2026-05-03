@@ -7,11 +7,14 @@ import Hotels from './pages/Hotels';
 import Tours from './pages/Tours';
 import Bookings from './pages/Bookings';
 import Users from './pages/Users';
+import Travellers from './pages/Travellers';
 import Reports from './pages/Reports';
 import Search from './pages/Search';
 import TourGuides from './pages/TourGuides';
 import Map from './pages/Map';
 import Reviews from './pages/Reviews';
+import Ratings from './pages/Ratings';
+import Enquiries from './pages/Enquiries';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
@@ -37,9 +40,9 @@ export default function App() {
   return (
     <div className="app-root">
       <Header />
-      <div style={{ display: 'flex', flex: 1 }}>
+      <div className="main-layout">
         {token && <Sidebar />}
-        <main className="container" style={{ marginLeft: token ? '260px' : '0' }}>
+        <main className={`main-content ${!token ? 'no-sidebar' : ''}`}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -48,6 +51,9 @@ export default function App() {
             <Route path="/hotels" element={<PrivateRoute><Hotels /></PrivateRoute>} />
             <Route path="/tours" element={<PrivateRoute><Tours /></PrivateRoute>} />
             <Route path="/tour-guides" element={<PrivateRoute><TourGuides /></PrivateRoute>} />
+            <Route path="/ratings" element={<PrivateRoute><Ratings /></PrivateRoute>} />
+            <Route path="/enquiries" element={<PrivateRoute><Enquiries /></PrivateRoute>} />
+            <Route path="/travellers" element={<PrivateRoute><Travellers /></PrivateRoute>} />
             <Route path="/map" element={<PrivateRoute><Map /></PrivateRoute>} />
             <Route path="/reviews" element={<PrivateRoute><Reviews /></PrivateRoute>} />
             <Route path="/transport" element={<PrivateRoute><Transport /></PrivateRoute>} />
@@ -57,6 +63,7 @@ export default function App() {
             <Route path="/users" element={<PrivateRoute><Users /></PrivateRoute>} />
             <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
             <Route path="/search" element={<PrivateRoute><Search /></PrivateRoute>} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
       </div>

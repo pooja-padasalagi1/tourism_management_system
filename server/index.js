@@ -11,6 +11,11 @@ const hotelRoutes = require('./routes/hotels');
 const tourRoutes = require('./routes/tours');
 const tourPackageRoutes = require('./routes/tourPackages');
 const bookingRoutes = require('./routes/bookings');
+const reviewRoutes = require('./routes/reviews');
+const tourGuideRoutes = require('./routes/tourGuides');
+const enquiryRoutes = require('./routes/enquiries');
+const transferRoutes = require('./routes/transfers');
+const paymentRoutes = require('./routes/payments');
 
 const app = express();
 app.use(cors());
@@ -40,6 +45,11 @@ app.use('/api/hotels', hotelRoutes);
 app.use('/api/tours', tourRoutes);
 app.use('/api/tour-packages', tourPackageRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/tour-guides', tourGuideRoutes);
+app.use('/api/enquiries', enquiryRoutes);
+app.use('/api/transfers', transferRoutes);
+app.use('/api/payments', paymentRoutes);
 
 app.get('/api/ping', (req, res) => res.json({ ok: true }));
 
